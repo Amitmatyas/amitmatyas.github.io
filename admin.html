@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>פאנל ניהול - עמית מטיאס</title>
+    <link rel="icon" href="https://via.placeholder.com/16/007bff/ffffff?text=A" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* כללי */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --accent-color: #28a745;
+            --background-light: #f8f9fa;
+            --background-dark: #343a40;
+            --text-color-dark: #212529;
+            --text-color-light: #f8f9fa;
+            --border-color: #dee2e6;
+            --box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            --hover-effect: translateY(-3px);
+        }
+
+        body {
+            font-family: 'Heebo', sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            color: var(--text-color-dark);
+            background-color: var(--background-light);
+            direction: rtl; /* יישור לימין */
+            text-align: right; /* יישור לימין */
+            overflow-x: hidden; /* למנוע גלילה אופקית בגלל אנימציות */
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: var(--accent-color);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            font-weight: 400;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* עמוד ניהול ספציפי */
+        .admin-main {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: var(--box-shadow);
+            text-align: right;
+        }
+
+        .admin-section {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .admin-section:last-of-type {
+            border-bottom: none;
+        }
+
+        .admin-form {
+            padding: 20px;
+            background-color: #f0f4f7;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .section-divider {
+            border: 0;
+            height: 1px;
+            background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0));
+            margin: 40px 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* טבלה */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            text-align: right;
+        }
+
+        .data-table th {
+            background-color: var(--primary-color);
+            color: var(--text-color-light);
+            font-weight: 700;
+            white-space: nowrap; /* מונע שבירת שורה בכותרות */
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        .data-table tbody tr:hover {
+            background-color: #e9ecef;
+        }
+
+        /* טופס כללי (לכניסה ולהוספה) */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="url"],
+        .form-group input[type="password"],
+        .form-group textarea {
+            width: calc(100% - 20px);
+            padding: 12px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 1rem;
+            font-family: 'Heebo', sans-serif;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+
+        .submit-button {
+            background-color: var(--primary-color);
+            color: var(--text-color-light);
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            width: auto;
+        }
+
+        .submit-button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        #form-status, #add-project-status, #login-status, #contacts-status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: 700;
+        }
+
+        #form-status.success, #add-project-status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        #form-status.error, #add-project-status.error, #login-status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        /* פוטר */
+        footer {
+            background-color: var(--background-dark);
+            color: var(--text-color-light);
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9rem;
+            margin-top: 50px;
+        }
+
+        /* רספונסיביות */
+        @media (max-width: 768px) {
+            .admin-main {
+                margin: 20px auto;
+                padding: 15px;
+            }
+            .data-table th,
+            .data-table td {
+                padding: 8px 10px;
+                font-size: 0.9em;
+            }
+        }
+        @media (max-width: 480px) {
+            .submit-button {
+                width: 100%;
+            }
+            .form-group input, .form-group textarea {
+                width: calc(100% - 24px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>פאנל ניהול</h1>
+    </header>
+
+    <main class="admin-main">
+        <section id="login-section" class="admin-section">
+            <h2>כניסה למנהל</h2>
+            <form id="login-form" class="login-form">
+                <div class="form-group">
+                    <label for="admin-username">שם משתמש:</label>
+                    <input type="text" id="admin-username" required>
+                </div>
+                <div class="form-group">
+                    <label for="admin-password">סיסמה:</label>
+                    <input type="password" id="admin-password" required>
+                </div>
+                <button type="submit" class="submit-button">התחבר</button>
+                <div id="login-status"></div>
+            </form>
+        </section>
+
+        <section id="admin-content" class="admin-section hidden">
+            <h2>הוספת פרויקט חדש</h2>
+            <form id="add-project-form" class="admin-form">
+                <div class="form-group">
+                    <label for="project-title">כותרת:</label>
+                    <input type="text" id="project-title" required>
+                </div>
+                <div class="form-group">
+                    <label for="project-description">תיאור:</label>
+                    <textarea id="project-description" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="project-image-url">כתובת תמונה (URL):</label>
+                    <input type="url" id="project-image-url" required>
+                </div>
+                <div class="form-group">
+                    <label for="project-url">קישור לפרויקט (URL):</label>
+                    <input type="url" id="project-url" required>
+                </div>
+                <button type="submit" class="submit-button">הוסף פרויקט</button>
+                <div id="add-project-status"></div>
+            </form>
+
+            <hr class="section-divider">
+
+            <h2>פניות מלקוחות</h2>
+            <div id="contacts-table-container" class="table-responsive">
+                <table id="contacts-table" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>שם</th>
+                            <th>אימייל</th>
+                            <th>הודעה</th>
+                            <th>תאריך קבלה</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+                <div id="contacts-status"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 עמית מטיאס. פאנל ניהול.</p>
+    </footer>
+
+    <script>
+        // Supabase Client Initialization (Same as index.js, but duplicated for standalone file)
+        const SUPABASE_URL = 'https://bycnlfbnoqsnctelvape.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5Y25sZmJub3FzbmN0ZWx2YXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxNzczMjAsImV4cCI6MjA2Nzc1MzMyMH0.XxBmwCEKgo70ILU-IZjHkXplsf2rLJBrpCXVT6hWm6U';
+
+        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Dummy Authentication (for Frontend only - NOT SECURE!)
+        const ADMIN_USERNAME = 'AmitMatyas';
+        const ADMIN_PASSWORD = 'Amit2012';
+
+        // Elements
+        const loginSection = document.getElementById('login-section');
+        const adminContent = document.getElementById('admin-content');
+        const loginForm = document.getElementById('login-form');
+        const addProjectForm = document.getElementById('add-project-form');
+        const contactsTableBody = document.querySelector('#contacts-table tbody');
+        const loginStatus = document.getElementById('login-status');
+        const addProjectStatus = document.getElementById('add-project-status');
+        const contactsStatus = document.getElementById('contacts-status');
+
+        // Function to handle login
+        function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('admin-username').value;
+            const password = document.getElementById('admin-password').value;
+
+            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+                loginSection.classList.add('hidden');
+                adminContent.classList.remove('hidden');
+                loadContacts(); // Load contacts after successful login
+            } else {
+                loginStatus.textContent = 'שם משתמש או סיסמה שגויים.';
+                loginStatus.classList.add('error');
+            }
+        }
+
+        // Function to add a new project
+        async function handleAddProject(event) {
+            event.preventDefault();
+
+            const title = document.getElementById('project-title').value;
+            const description = document.getElementById('project-description').value;
+            const imageUrl = document.getElementById('project-image-url').value;
+            const projectUrl = document.getElementById('project-url').value;
+
+            addProjectStatus.textContent = 'מוסיף פרויקט...';
+            addProjectStatus.className = '';
+
+            const { error } = await supabase
+                .from('projects')
+                .insert([{ title, description, image_url: imageUrl, project_url: projectUrl }]);
+
+            if (error) {
+                console.error('Error adding project:', error.message);
+                addProjectStatus.textContent = `שגיאה בהוספת הפרויקט: ${error.message}`;
+                addProjectStatus.classList.add('error');
+            } else {
+                addProjectStatus.textContent = 'הפרויקט נוסף בהצלחה!';
+                addProjectStatus.classList.add('success');
+                addProjectForm.reset();
+            }
+        }
+
+        // Function to load contacts
+        async function loadContacts() {
+            contactsTableBody.innerHTML = ''; // Clear existing contacts
+            contactsStatus.textContent = 'טוען פניות...';
+            contactsStatus.className = '';
+
+            const { data, error } = await supabase
+                .from('contacts')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching contacts:', error.message);
+                contactsStatus.textContent = `שגיאה בטעינת הפניות: ${error.message}`;
+                contactsStatus.classList.add('error');
+                return;
+            }
+
+            if (data && data.length > 0) {
+                data.forEach(contact => {
+                    const row = contactsTableBody.insertRow();
+                    row.insertCell().textContent = contact.name;
+                    row.insertCell().textContent = contact.email;
+                    row.insertCell().textContent = contact.message;
+                    row.insertCell().textContent = new Date(contact.created_at).toLocaleString('he-IL');
+                });
+                contactsStatus.textContent = ''; // Clear status on success
+            } else {
+                contactsStatus.textContent = 'אין פניות להצגה כרגע.';
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            loginForm.addEventListener('submit', handleLogin);
+            addProjectForm.addEventListener('submit', handleAddProject);
+        });
+    </script>
+</body>
+</html>

@@ -6,7 +6,7 @@
     <title>עמוד מנהל - ניהול פרויקטים ופניות</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.39.0/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
     <style>
         * {
             margin: 0;
@@ -315,7 +315,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Login Section -->
         <div id="loginSection" class="login-section">
             <h2>כניסה לעמוד המנהל</h2>
             <div class="form-group">
@@ -330,7 +329,6 @@
             <div id="loginError"></div>
         </div>
 
-        <!-- Dashboard -->
         <div id="dashboard" class="dashboard">
             <button class="btn btn-danger logout-btn" onclick="logout()">יציאה</button>
             
@@ -340,11 +338,10 @@
             </div>
 
             <div class="tabs">
-                <div class="tab active" onclick="switchTab('projects')">ניהול פרויקטים</div>
-                <div class="tab" onclick="switchTab('contacts')">פניות</div>
+                <div class="tab active" onclick="switchTab('projects', event)">ניהול פרויקטים</div>
+                <div class="tab" onclick="switchTab('contacts', event)">פניות</div>
             </div>
 
-            <!-- Projects Tab -->
             <div id="projectsTab" class="tab-content active">
                 <div class="section">
                     <h3>הוספת פרויקט חדש</h3>
@@ -374,7 +371,6 @@
                 </div>
             </div>
 
-            <!-- Contacts Tab -->
             <div id="contactsTab" class="tab-content">
                 <div class="section">
                     <h3>פניות שהתקבלו</h3>
@@ -401,7 +397,7 @@
         // Supabase configuration
         const supabaseUrl = 'https://bycnlfbnoqsnctelvape.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5Y25sZmJub3FzbmN0ZWx2YXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxNzczMjAsImV4cCI6MjA2Nzc1MzMyMH0.XxBmwCEKgo70ILU-IZjHkXplsf2rLJBrpCXVT6hWm6U';
-        const supabase = supabase_js.createClient(supabaseUrl, supabaseKey);
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // Login credentials
         const ADMIN_USERNAME = 'AmitMatyas';
@@ -435,7 +431,7 @@
         }
 
         // Tab switching
-        function switchTab(tabName) {
+        function switchTab(tabName, event) { // Added 'event' as a parameter
             // Remove active class from all tabs and contents
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));

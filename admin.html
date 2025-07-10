@@ -128,6 +128,10 @@
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
         }
 
+        .btn-success {
+            background: linear-gradient(135deg, #51cf66 0%, #40a04e 100%);
+        }
+
         .dashboard {
             display: none;
         }
@@ -382,7 +386,7 @@
                                     <th>שם</th>
                                     <th>אימייל</th>
                                     <th>הודעה</th>
-                                </tr>
+                                    <th>פעולות</th> </tr>
                             </thead>
                             <tbody id="contactsTableBody">
                             </tbody>
@@ -518,7 +522,7 @@
                     const projectCard = document.createElement('div');
                     projectCard.className = 'project-card';
                     projectCard.innerHTML = `
-                        <img src="${project.image_url}" alt="${project.title}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xMjUgNzVIMTc1VjEyNUgxMjVWNzVaIiBmaWxsPSIjREREIi8+CjwvZz4KPC9zdmc+'">
+                        <img src="${project.image_url}" alt="${project.title}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xMjUgNzVIMTczVjEyNUgxMjVWNzVaIiBmaWxsPSIjREREIi8+CjwvZz4KPC9zdmc+'">
                         <h4>${project.title}</h4>
                         <p>${project.description}</p>
                         <button class="btn" onclick="window.open('${project.project_url}', '_blank')">צפה בפרויקט</button>
@@ -571,7 +575,7 @@
                 contactsTableBody.innerHTML = '';
 
                 if (data.length === 0) {
-                    contactsTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #7f8c8d;">אין פניות עדיין</td></tr>';
+                    contactsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #7f8c8d;">אין פניות עדיין</td></tr>'; // שינוי ל-colspan="5"
                     return;
                 }
 
@@ -583,12 +587,38 @@
                         <td>${contact.name}</td>
                         <td>${contact.email}</td>
                         <td class="message-cell">${contact.message}</td>
+                        <td>
+                            <button class="btn btn-success" onclick="markContactAsHandled(${contact.id})">טופל</button>
+                        </td>
                     `;
                     contactsTableBody.appendChild(row);
                 });
 
             } catch (error) {
-                document.getElementById('contactsTableBody').innerHTML = '<tr><td colspan="4" class="error">שגיאה בטעינת הפניות: ' + error.message + '</td></tr>';
+                document.getElementById('contactsTableBody').innerHTML = '<tr><td colspan="5" class="error">שגיאה בטעינת הפניות: ' + error.message + '</td></tr>'; // שינוי ל-colspan="5"
+            }
+        }
+
+        // Mark contact as handled function (delete from Supabase)
+        async function markContactAsHandled(contactId) {
+            if (!confirm('האם אתה בטוח שברצונך לסמן פנייה זו כטופלה ולמחוק אותה?')) {
+                return;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('contacts')
+                    .delete()
+                    .eq('id', contactId);
+
+                if (error) {
+                    throw error;
+                }
+
+                loadContacts(); // Reload contacts after deletion
+
+            } catch (error) {
+                alert('שגיאה במחיקת הפנייה: ' + error.message);
             }
         }
 

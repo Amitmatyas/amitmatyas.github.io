@@ -3,15 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מערכת קודים חד-פעמית</title>
-    <link rel="stylesheet" href="style.css">
+    <title>אתר לצפייה חד-פעמית</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* CSS עבור עמוד הלקוח */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e0f2f7; /* Light blue background */
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            direction: rtl;
+            text-align: right;
+            line-height: 1.6;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            margin: 20px;
+            box-sizing: border-box;
+        }
+
+        h1, h2 {
+            color: #007bff; /* Primary blue for headings */
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 24px); /* Adjusted for padding */
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .message {
+            padding: 10px;
+            margin-top: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+        }
+
+        .message.error {
+            background-color: #ffe0e6;
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        .message.success {
+            background-color: #e6ffed;
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        /* Spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, .1);
+            border-left-color: #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Protected content styles */
+        .protected-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+    </style>
 </head>
 <body oncontextmenu="return false;">
     <div id="loading-spinner" class="spinner" style="display: none;"></div>
-    <p id="global-message" class="message" style="display: none;"></p>
+    <p id="message" class="message" style="display: none;"></p>
 
-    <div id="client-area" class="container">
+    <div id="access-container" class="container">
         <h1>הכנס קוד גישה</h1>
         <input type="text" id="access-code-input" placeholder="הקוד שקיבלת" maxlength="10">
         <button id="submit-code-button">כניסה לאתר</button>
@@ -25,37 +137,6 @@
         <p>ברגע שתצא/תצאי מהדף או תנסה/י לרענן, לא תוכל/י לגשת אליו שוב עם אותו קוד.</p>
     </div>
 
-    <div id="admin-login-area" class="container" style="display: none;">
-        <h2>פאנל מנהל - התחברות</h2>
-        <input type="password" id="admin-password-input" placeholder="סיסמת מנהל">
-        <button id="admin-login-button">כניסה למנהל</button>
-    </div>
-
-    <div id="admin-panel-content" class="container" style="display: none;">
-        <h2>פאנל מנהל</h2>
-        <p>שלום, מנהל!</p>
-
-        <h3>קוד גישה נוכחי:</h3>
-        <p id="current-code-display">טוען קוד...</p>
-        <button id="generate-new-code-button">צור קוד גישה חדש</button>
-
-        <h3>היסטוריית כניסות:</h3>
-        <table id="history-table">
-            <thead>
-                <tr>
-                    <th>זמן כניסה</th>
-                    <th>קוד בשימוש</th>
-                    <th>כתובת IP</th>
-                    <th>סוג מכשיר</th>
-                    <th>שם</th>
-                </tr>
-            </thead>
-            <tbody>
-                </tbody>
-        </table>
-        <button id="logout-admin-button">התנתק</button>
-    </div>
-
     <script>
         // --- הגדרות Supabase ---
         const SUPABASE_URL = 'https://zeuztgzhagfpnthszxsl.supabase.co';
@@ -63,227 +144,26 @@
 
         const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // --- קבועים ואלמנטים ב-DOM ---
-        const ADMIN_PASSWORD = 'your_strong_admin_password'; // שנה סיסמה זו! לא מאובטח!
-        const GLOBAL_ACCESS_KEY_LS = 'global_site_access_status'; // מפתח ל-Local Storage
-
+        // --- אלמנטים ב-DOM ---
         const loadingSpinner = document.getElementById('loading-spinner');
-        const globalMessageElement = document.getElementById('global-message');
-
-        // Client Elements
-        const clientArea = document.getElementById('client-area');
+        const messageElement = document.getElementById('message');
+        const accessContainer = document.getElementById('access-container');
         const accessCodeInput = document.getElementById('access-code-input');
         const submitCodeButton = document.getElementById('submit-code-button');
         const contentArea = document.getElementById('content-area');
 
-        // Admin Elements
-        const adminLoginArea = document.getElementById('admin-login-area');
-        const adminPasswordInput = document.getElementById('admin-password-input');
-        const adminLoginButton = document.getElementById('admin-login-button');
-        const adminPanelContent = document.getElementById('admin-panel-content');
-        const currentCodeDisplay = document.getElementById('current-code-display');
-        const generateNewCodeButton = document.getElementById('generate-new-code-button');
-        const historyTableBody = document.querySelector('#history-table tbody');
-        const logoutAdminButton = document.getElementById('logout-admin-button');
-
         // --- פונקציות עזר ---
-        function displayGlobalMessage(msg, isError = false) {
-            globalMessageElement.textContent = msg;
-            globalMessageElement.className = isError ? 'message error' : 'message success';
-            globalMessageElement.style.display = 'block';
+        function displayMessage(msg, isError = false) {
+            messageElement.textContent = msg;
+            messageElement.className = isError ? 'message error' : 'message success';
+            messageElement.style.display = 'block';
         }
 
         function showLoading(show) {
             loadingSpinner.style.display = show ? 'block' : 'none';
         }
 
-        // --- לוגיקת גישה ללקוח ---
-        async function checkClientAccess() {
-            // בדיקה ראשונית ב-Local Storage למניעת כניסות חוזרות מאותו דפדפן
-            if (localStorage.getItem(GLOBAL_ACCESS_KEY_LS) === 'viewed') {
-                clientArea.style.display = 'none';
-                contentArea.style.display = 'none';
-                adminLoginArea.style.display = 'none'; // הסתר גם את כניסת המנהל אם נחסם
-                adminPanelContent.style.display = 'none';
-                displayGlobalMessage('כבר נכנסת לאתר זה. הגישה נחסמה.', true);
-                return;
-            }
-
-            // הוסף אירוע לחיצה לכפתור הכניסה של הלקוח
-            submitCodeButton.addEventListener('click', async () => {
-                const enteredCode = accessCodeInput.value.trim().toUpperCase();
-                if (!enteredCode) {
-                    displayGlobalMessage('אנא הכנס קוד גישה.', true);
-                    return;
-                }
-
-                showLoading(true);
-                displayGlobalMessage('', false); // נקה הודעות קודמות
-
-                try {
-                    // 1. קבל את הקוד הנוכחי מ-Supabase (באמצעות anon - זוכר, זה פחות מאובטח)
-                    const { data: currentCodeData, error: currentCodeError } = await supabase
-                        .from('current_code')
-                        .select('code')
-                        .eq('id', 1) // מניחים שתמיד יש רשומה אחת עם id=1
-                        .single();
-
-                    if (currentCodeError && currentCodeError.code !== 'PGRST116') { // PGRST116 = Single row not found
-                        throw currentCodeError;
-                    }
-
-                    const actualCurrentCode = currentCodeData ? currentCodeData.code : null;
-
-                    // 2. בדוק אם הקוד שהוזן תואם לקוד הנוכחי
-                    if (!actualCurrentCode || enteredCode !== actualCurrentCode) {
-                        displayGlobalMessage('קוד גישה שגוי או נוצל כבר.', true);
-                        return;
-                    }
-
-                    // 3. הקוד נכון - סמן אותו כנוצל ב-Local Storage
-                    localStorage.setItem(GLOBAL_ACCESS_KEY_LS, 'viewed');
-
-                    // 4. צור קוד חדש ועדכן אותו ב-Supabase
-                    const newCode = generateRandomCode(8); // פונקציה לייצור קוד
-                    const { error: updateCodeError } = await supabase
-                        .from('current_code')
-                        .upsert({ id: 1, code: newCode }, { onConflict: 'id' });
-
-                    if (updateCodeError) {
-                        console.error('שגיאה בעדכון הקוד ב-DB:', updateCodeError.message);
-                        displayGlobalMessage('שגיאה בעדכון קוד. נסה שוב.', true);
-                        // אם העדכון נכשל, אל תציג את התוכן כדי לא לאפשר גישה עם קוד "שרוף"
-                        localStorage.removeItem(GLOBAL_ACCESS_KEY_LS); // בטל את השמירה ב-LS
-                        return;
-                    }
-
-                    // 5. שמור היסטוריה
-                    const ipAddress = await getIpAddress(); // קבל כתובת IP
-                    const deviceType = navigator.userAgent;
-
-                    const { error: historyError } = await supabase
-                        .from('history')
-                        .insert([{ ip: ipAddress, device_type: deviceType, code_used: enteredCode }]);
-                    if (historyError) {
-                        console.error('שגיאה בשמירת היסטוריה:', historyError.message);
-                        // המשך להציג את התוכן גם אם ההיסטוריה לא נשמרה
-                    }
-
-                    // 6. הצג את תוכן האתר
-                    clientArea.style.display = 'none';
-                    contentArea.style.display = 'block';
-                    displayGlobalMessage('הגישה אושרה בהצלחה!', false);
-                    disablePageInteractions(); // הפעל הגנות
-
-                } catch (error) {
-                    console.error('שגיאה בגישה לאתר:', error.message);
-                    displayGlobalMessage('שגיאה בגישה לשרת. נסה שוב מאוחר יותר.', true);
-                } finally {
-                    showLoading(false);
-                }
-            });
-        }
-
-        // --- לוגיקת פאנל מנהל ---
-        async function setupAdminPanel() {
-            // הצג את כפתור הכניסה למנהל אם אין גישה ללקוח
-            if (localStorage.getItem(GLOBAL_ACCESS_KEY_LS) !== 'viewed') {
-                adminLoginArea.style.display = 'block';
-            }
-
-            adminLoginButton.addEventListener('click', () => {
-                const enteredPassword = adminPasswordInput.value;
-                if (enteredPassword === ADMIN_PASSWORD) {
-                    adminLoginArea.style.display = 'none';
-                    clientArea.style.display = 'none'; // הסתר את אזור הלקוח
-                    contentArea.style.display = 'none'; // הסתר תוכן מוגן
-                    adminPanelContent.style.display = 'block';
-                    loadAdminData();
-                } else {
-                    displayGlobalMessage('סיסמת מנהל שגויה!', true);
-                }
-            });
-
-            logoutAdminButton.addEventListener('click', () => {
-                adminPanelContent.style.display = 'none';
-                adminPasswordInput.value = ''; // נקה סיסמה
-                checkClientAccess(); // חזור למצב לקוח (או חסום אם כבר נכנס)
-            });
-
-            // טעינת נתוני מנהל (קוד נוכחי והיסטוריה)
-            async function loadAdminData() {
-                showLoading(true);
-                try {
-                    // קוד נוכחי
-                    const { data: codeData, error: codeError } = await supabase
-                        .from('current_code')
-                        .select('code')
-                        .eq('id', 1)
-                        .single();
-
-                    if (codeError && codeError.code !== 'PGRST116') throw codeError;
-                    currentCodeDisplay.textContent = codeData ? codeData.code : 'אין קוד נוכחי. צור אחד.';
-
-                    // היסטוריה
-                    const { data: historyData, error: historyError } = await supabase
-                        .from('history')
-                        .select('*')
-                        .order('created_at', { ascending: false });
-
-                    if (historyError) throw historyError;
-
-                    historyTableBody.innerHTML = ''; // נקה תוכן קודם
-                    if (historyData.length === 0) {
-                        const row = historyTableBody.insertRow();
-                        const cell = row.insertCell();
-                        cell.colSpan = 5;
-                        cell.textContent = 'אין נתוני היסטוריה עדיין.';
-                        cell.style.textAlign = 'center';
-                    } else {
-                        historyData.forEach(entry => {
-                            const row = historyTableBody.insertRow();
-                            row.insertCell().textContent = new Date(entry.created_at).toLocaleString('he-IL');
-                            row.insertCell().textContent = entry.code_used || 'N/A';
-                            row.insertCell().textContent = entry.ip || 'N/A';
-                            row.insertCell().textContent = entry.device_type || 'N/A';
-                            row.insertCell().textContent = entry.name || 'N/A';
-                        });
-                    }
-                } catch (error) {
-                    console.error('שגיאה בטעינת נתוני מנהל:', error.message);
-                    displayGlobalMessage('שגיאה בטעינת נתוני מנהל.', true);
-                } finally {
-                    showLoading(false);
-                }
-            }
-
-            // יצירת קוד חדש למנהל
-            generateNewCodeButton.addEventListener('click', async () => {
-                showLoading(true);
-                try {
-                    const newCode = generateRandomCode(8); // פונקציה לייצור קוד
-
-                    const { error } = await supabase
-                        .from('current_code')
-                        .upsert({ id: 1, code: newCode }, { onConflict: 'id' });
-
-                    if (error) throw error;
-
-                    displayGlobalMessage(`קוד חדש נוצר: ${newCode}`, false);
-                    currentCodeDisplay.textContent = newCode; // עדכן תצוגה
-                    loadHistory(); // רענן היסטוריה אם צריך
-                } catch (error) {
-                    console.error('שגיאה ביצירת קוד חדש:', error.message);
-                    displayGlobalMessage('שגיאה ביצירת קוד חדש.', true);
-                } finally {
-                    showLoading(false);
-                }
-            });
-        }
-
-        // --- פונקציות כלליות ---
-
-        // יצירת קוד אקראי
+        // יצירת קוד אקראי (עבור יצירת קוד חדש אחרי שימוש)
         function generateRandomCode(length) {
             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let result = '';
@@ -331,11 +211,11 @@
             });
 
             document.addEventListener('keydown', function(e) {
-                const forbiddenKeys = ['c', 'x', 'v', 'a', 'p', 's', 'i', 'j'];
+                const forbiddenKeys = ['c', 'x', 'v', 'a', 'p', 's', 'i', 'j']; // העתקה, גזירה, הדבקה, בחר הכל, הדפסה, שמירה, בדיקה
                 if ((e.ctrlKey || e.metaKey) && forbiddenKeys.includes(e.key.toLowerCase())) {
                     e.preventDefault();
                 }
-                if (e.key === 'F12') {
+                if (e.key === 'F12') { // חסימת F12 (כלי מפתחים)
                     e.preventDefault();
                 }
             });
@@ -344,12 +224,89 @@
         }
 
 
-        // --- אתחול המערכת ---
+        // --- לוגיקת גישה ---
         document.addEventListener('DOMContentLoaded', () => {
-            // התחל בבדיקת גישת הלקוח
-            checkClientAccess();
-            // הגדר את לוגיקת פאנל המנהל
-            setupAdminPanel();
+            const LAST_USED_CODE_LS_KEY = 'last_used_access_code_for_client'; // מפתח ל-Local Storage של הלקוח
+
+            // בדיקה ראשונית: האם המשתמש כבר נכנס עם קוד מהדפדפן הזה?
+            if (localStorage.getItem(LAST_USED_CODE_LS_KEY) === 'true') {
+                accessContainer.style.display = 'none';
+                contentArea.style.display = 'none';
+                displayMessage('כבר נכנסת לאתר זה באמצעות קוד. לא ניתן לגשת שוב מאותו דפדפן.', true);
+                return;
+            }
+
+            // אירוע לחיצה על כפתור הכניסה
+            submitCodeButton.addEventListener('click', async () => {
+                const enteredCode = accessCodeInput.value.trim().toUpperCase();
+                if (!enteredCode) {
+                    displayMessage('אנא הכנס קוד גישה.', true);
+                    return;
+                }
+
+                showLoading(true);
+                displayMessage('', false); // נקה הודעות קודמות
+
+                try {
+                    // 1. קבל את הקוד הנוכחי מ-Supabase (דרך API פתוח)
+                    const { data: currentCodeData, error: currentCodeError } = await supabase
+                        .from('current_code')
+                        .select('code')
+                        .eq('id', 1) // תמיד מניחים שיש רק רשומה אחת עם ID=1
+                        .single();
+
+                    if (currentCodeError && currentCodeError.code !== 'PGRST116') { // PGRST116 = Single row not found
+                        throw currentCodeError;
+                    }
+
+                    const actualCurrentCode = currentCodeData ? currentCodeData.code : null;
+
+                    // 2. בדוק אם הקוד שהוזן תואם לקוד הנוכחי
+                    if (!actualCurrentCode || enteredCode !== actualCurrentCode) {
+                        displayMessage('קוד גישה שגוי או פג תוקף.', true);
+                        return;
+                    }
+
+                    // 3. הקוד נכון - סמן אותו כנוצל ב-Local Storage של הלקוח
+                    localStorage.setItem(LAST_USED_CODE_LS_KEY, 'true');
+
+                    // 4. צור קוד חדש ועדכן אותו ב-Supabase (דרך API פתוח)
+                    const newCode = generateRandomCode(8);
+                    const { error: updateCodeError } = await supabase
+                        .from('current_code')
+                        .update({ code: newCode })
+                        .eq('id', 1);
+
+                    if (updateCodeError) {
+                        console.error('שגיאה בעדכון הקוד ב-DB:', updateCodeError.message);
+                        displayMessage('שגיאה בעדכון קוד. נסה שוב.', true);
+                        localStorage.removeItem(LAST_USED_CODE_LS_KEY); // בטל את סימון ה-LS
+                        return;
+                    }
+
+                    // 5. שמור היסטוריה (דרך API פתוח)
+                    const ipAddress = await getIpAddress();
+                    const deviceType = navigator.userAgent;
+                    const { error: historyError } = await supabase
+                        .from('history')
+                        .insert([{ ip: ipAddress, device_type: deviceType, code_used: enteredCode }]);
+                    if (historyError) {
+                        console.error('שגיאה בשמירת היסטוריה:', historyError.message);
+                    }
+
+                    // 6. הצג את תוכן האתר
+                    accessContainer.style.display = 'none';
+                    contentArea.style.display = 'block';
+                    displayMessage('הגישה אושרה בהצלחה!', false);
+                    disablePageInteractions(); // הפעל הגנות
+
+                } catch (error) {
+                    console.error('שגיאה בגישה לאתר:', error.message);
+                    displayMessage('שגיאה בגישה לשרת. נסה שוב מאוחר יותר.', true);
+                } finally {
+                    showLoading(false);
+                }
+            });
         });
     </script>
 </body>

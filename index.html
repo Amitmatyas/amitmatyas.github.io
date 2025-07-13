@@ -12,13 +12,16 @@
             background-color: #e0f2f7; /* Light blue background */
             color: #333;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            justify-content: flex-start;
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            padding-top: 20px;
             direction: rtl;
             text-align: right;
             line-height: 1.6;
+            box-sizing: border-box;
         }
 
         .container {
@@ -40,7 +43,7 @@
         }
 
         input[type="text"] {
-            width: calc(100% - 24px); /* Adjusted for padding */
+            width: calc(100% - 24px);
             padding: 12px;
             margin-bottom: 15px;
             border: 1px solid #ced4da;
@@ -73,11 +76,14 @@
 
         .message {
             padding: 10px;
-            margin-top: 15px;
+            margin-bottom: 20px;
             border-radius: 8px;
             font-weight: bold;
             text-align: center;
             display: none;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
         }
 
         .message.error {
@@ -117,6 +123,24 @@
             border-radius: 8px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
         }
+
+        #anti-screenshot-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9); /* כהה יותר, בולט יותר */
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            font-weight: bold;
+            text-align: center;
+            z-index: 9999; /* ודא שזה מעל הכל */
+            display: none; /* נסתר כברירת מחדל */
+        }
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -137,36 +161,38 @@
         <p>ברגע שתצא/תצאי מהדף או תנסה/י לרענן, לא תוכל/י לגשת אליו שוב עם אותו קוד.</p>
     </div>
 
+    <div id="anti-screenshot-overlay">
+        <span>זוהה ניסיון אסור! התוכן הוצפן.</span>
+    </div>
+
     <script>
         // --- הגדרות Supabase ---
-        const supabaseUrl = 'https://zeuztgzhagfpnthszxsl.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldXp0Z3poYWdmcG50aHN6eHNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0NDIwNTAsImV4cCI6MjA2ODAxODA1MH0.nRwI4EuakOHSCyfb9FW0a6wba02odWv8IkM_5m3-lRk';
+        const supabaseUrl = 'https://zeuztgzhagzhagfpnthszxsl.supabase.co'; // הנתונים שלך
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldXp0Z3poYWdmcG50aHN6eHNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0NDIwNTAsImV4cCI6MjA2ODAxODA1MH0.nRwI4EuakOHSCyfb9FW0a6wba02odXv8IkM_5m3-lRk'; // הנתונים שלך
 
-        let supabaseClient; // שיניתי את שם המשתנה כדי למנוע בלבול
+        let supabaseClient;
+        let contentIsVisible = false; // עוקב האם התוכן מוצג ללקוח
 
-        // פונקציה לאתחול Supabase
         function initSupabase() {
             if (typeof window.supabase !== 'undefined') {
                 supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
                 console.log('Supabase client initialized successfully.');
-                setupClientLogic(); // קרא לפונקציה הראשית שלך אחרי ש-Supabase מאותחל
+                setupClientLogic();
             } else {
                 console.error('Supabase library not loaded yet. Retrying...');
-                setTimeout(initSupabase, 100); // נסה שוב בעוד 100 מילישניות
+                setTimeout(initSupabase, 100);
             }
         }
 
-        // פונקציה המכילה את כל הלוגיקה של הלקוח
         function setupClientLogic() {
-            // --- אלמנטים ב-DOM ---
             const loadingSpinner = document.getElementById('loading-spinner');
             const messageElement = document.getElementById('message');
             const accessContainer = document.getElementById('access-container');
             const accessCodeInput = document.getElementById('access-code-input');
             const submitCodeButton = document.getElementById('submit-code-button');
             const contentArea = document.getElementById('content-area');
+            const antiScreenshotOverlay = document.getElementById('anti-screenshot-overlay');
 
-            // --- פונקציות עזר ---
             function displayMessage(msg, isError = false) {
                 messageElement.textContent = msg;
                 messageElement.className = isError ? 'message error' : 'message success';
@@ -197,7 +223,6 @@
                 }
             }
 
-            // --- הגנות בצד הלקוח (Client-side protections) ---
             function disablePageInteractions() {
                 document.querySelectorAll('.protected-content img').forEach(function(img) {
                     img.addEventListener('dragstart', function(e) { e.preventDefault(); });
@@ -235,11 +260,56 @@
                 document.addEventListener('selectstart', function(e) { e.preventDefault(); });
             }
 
+            // --- לוגיקה חדשה להסתרת תוכן ---
+            function hideContentAndShowOverlay() {
+                if (contentIsVisible) { // רק אם התוכן היה גלוי
+                    contentArea.style.display = 'none';
+                    antiScreenshotOverlay.style.display = 'flex';
+                    console.warn('תוכן הוסתר עקב זיהוי ניסיון אסור!');
+                }
+            }
 
-            // --- לוגיקת גישה ---
-            const LAST_USED_CODE_LS_KEY = 'last_used_access_code_for_client'; // מפתח ל-Local Storage של הלקוח
+            function showContentAndHideOverlay() {
+                if (contentIsVisible) { // רק אם התוכן אמור להיות גלוי
+                    contentArea.style.display = 'block';
+                    antiScreenshotOverlay.style.display = 'none';
+                }
+            }
 
-            // בדיקה ראשונית: האם המשתמש כבר נכנס עם קוד מהדפדפן הזה?
+            // זיהוי עזיבת פוקוס מהחלון/לשונית (למשל, מעבר ליישום צילום מסך)
+            window.addEventListener('blur', hideContentAndShowOverlay);
+            window.addEventListener('focus', showContentAndHideOverlay);
+
+            // זיהוי שינויים בגודל החלון (לפעמים קורה בפתיחת כלי מפתחים)
+            const threshold = 160; // סף לשינוי בגובה, טיפוסי לכלי מפתחים
+            window.addEventListener('resize', () => {
+                if (contentIsVisible && (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold)) {
+                    // אם חלון הדפדפן קטן משמעותית מהחלון החיצוני (כלי מפתחים פתוחים)
+                    hideContentAndShowOverlay();
+                } else if (contentIsVisible) {
+                    // אם הגודל חזר למצב רגיל
+                    showContentAndHideOverlay();
+                }
+            });
+
+            // זיהוי פתיחת כלי מפתחים נוסף (שיטה נוספת)
+            // זה פחות אמין אבל משלים
+            let devtoolsOpen = false;
+            const checkDevTools = () => {
+                const newDevtoolsOpen = /firefox|chrome|edge/i.test(navigator.userAgent) && (window.outerWidth - window.innerWidth > 100 || window.outerHeight - window.innerHeight > 100);
+                if (newDevtoolsOpen && !devtoolsOpen) {
+                    devtoolsOpen = true;
+                    hideContentAndShowOverlay();
+                } else if (!newDevtoolsOpen && devtoolsOpen) {
+                    devtoolsOpen = false;
+                    showContentAndHideOverlay();
+                }
+            };
+            setInterval(checkDevTools, 500); // בדיקה כל חצי שניה
+
+
+            const LAST_USED_CODE_LS_KEY = 'last_used_access_code_for_client';
+
             if (localStorage.getItem(LAST_USED_CODE_LS_KEY) === 'true') {
                 accessContainer.style.display = 'none';
                 contentArea.style.display = 'none';
@@ -247,7 +317,6 @@
                 return;
             }
 
-            // אירוע לחיצה על כפתור הכניסה
             submitCodeButton.addEventListener('click', async () => {
                 const enteredCode = accessCodeInput.value.trim().toUpperCase();
                 if (!enteredCode) {
@@ -256,32 +325,28 @@
                 }
 
                 showLoading(true);
-                displayMessage('', false); // נקה הודעות קודמות
+                displayMessage('', false);
 
                 try {
-                    // 1. קבל את הקוד הנוכחי מ-Supabase (דרך API פתוח)
                     const { data: currentCodeData, error: currentCodeError } = await supabaseClient
                         .from('current_code')
                         .select('code')
-                        .eq('id', 1) // תמיד מניחים שיש רק רשומה אחת עם ID=1
+                        .eq('id', 1)
                         .single();
 
-                    if (currentCodeError && currentCodeError.code !== 'PGRST116') { // PGRST116 = Single row not found
+                    if (currentCodeError && currentCodeError.code !== 'PGRST116') {
                         throw currentCodeError;
                     }
 
                     const actualCurrentCode = currentCodeData ? currentCodeData.code : null;
 
-                    // 2. בדוק אם הקוד שהוזן תואם לקוד הנוכחי
                     if (!actualCurrentCode || enteredCode !== actualCurrentCode) {
                         displayMessage('קוד גישה שגוי או פג תוקף.', true);
                         return;
                     }
 
-                    // 3. הקוד נכון - סמן אותו כנוצל ב-Local Storage של הלקוח
                     localStorage.setItem(LAST_USED_CODE_LS_KEY, 'true');
 
-                    // 4. צור קוד חדש ועדכן אותו ב-Supabase (דרך API פתוח)
                     const newCode = generateRandomCode(8);
                     const { error: updateCodeError } = await supabaseClient
                         .from('current_code')
@@ -291,11 +356,10 @@
                     if (updateCodeError) {
                         console.error('שגיאה בעדכון הקוד ב-DB:', updateCodeError.message);
                         displayMessage('שגיאה בעדכון קוד. נסה שוב.', true);
-                        localStorage.removeItem(LAST_USED_CODE_LS_KEY); // בטל את סימון ה-LS
+                        localStorage.removeItem(LAST_USED_CODE_LS_KEY);
                         return;
                     }
 
-                    // 5. שמור היסטוריה (דרך API פתוח)
                     const ipAddress = await getIpAddress();
                     const deviceType = navigator.userAgent;
                     const { error: historyError } = await supabaseClient
@@ -303,13 +367,16 @@
                         .insert([{ ip: ipAddress, device_type: deviceType, code_used: enteredCode }]);
                     if (historyError) {
                         console.error('שגיאה בשמירת היסטוריה:', historyError.message);
+                        displayMessage('הגישה אושרה, אך הייתה שגיאה בשמירת היסטוריית כניסות.', true);
+                    } else {
+                        console.log('היסטוריה נשמרה בהצלחה.');
                     }
 
-                    // 6. הצג את תוכן האתר
                     accessContainer.style.display = 'none';
                     contentArea.style.display = 'block';
+                    contentIsVisible = true; // סמן שהתוכן גלוי כעת
                     displayMessage('הגישה אושרה בהצלחה!', false);
-                    disablePageInteractions(); // הפעל הגנות
+                    disablePageInteractions();
 
                 } catch (error) {
                     console.error('שגיאה בגישה לאתר:', error.message);
@@ -320,7 +387,6 @@
             });
         }
 
-        // הפעל את פונקציית האתחול כאשר ה-DOM נטען
         document.addEventListener('DOMContentLoaded', initSupabase);
     </script>
 </body>

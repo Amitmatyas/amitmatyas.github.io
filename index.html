@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>אתר לצפייה חד-פעמית</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <style>
         /* CSS עבור עמוד הלקוח */
         body {
@@ -139,93 +139,104 @@
 
     <script>
         // --- הגדרות Supabase ---
-        const SUPABASE_URL = 'https://zeuztgzhagfpnthszxsl.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldXp0Z3poYWdmcG50aHN6eHNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0NDIwNTAsImV4cCI6MjA2ODAxODA1MH0.nRwI4EuakOHSCyfb9FW0a6wba02odXv8IkM_5m3-lRk'; // המפתח הציבורי שלך
+        const supabaseUrl = 'https://zeuztgzhagfpnthszxsl.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldXp0Z3poYWdmcG50aHN6eHNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0NDIwNTAsImV4cCI6MjA2ODAxODA1MH0.nRwI4EuakOHSCyfb9FW0a6wba02odWv8IkM_5m3-lRk';
 
-        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let supabaseClient; // שיניתי את שם המשתנה כדי למנוע בלבול
 
-        // --- אלמנטים ב-DOM ---
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const messageElement = document.getElementById('message');
-        const accessContainer = document.getElementById('access-container');
-        const accessCodeInput = document.getElementById('access-code-input');
-        const submitCodeButton = document.getElementById('submit-code-button');
-        const contentArea = document.getElementById('content-area');
-
-        // --- פונקציות עזר ---
-        function displayMessage(msg, isError = false) {
-            messageElement.textContent = msg;
-            messageElement.className = isError ? 'message error' : 'message success';
-            messageElement.style.display = 'block';
-        }
-
-        function showLoading(show) {
-            loadingSpinner.style.display = show ? 'block' : 'none';
-        }
-
-        // יצירת קוד אקראי (עבור יצירת קוד חדש אחרי שימוש)
-        function generateRandomCode(length) {
-            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let result = '';
-            for (let i = 0; i < length; i++) {
-                result += characters.charAt(Math.floor(Math.random() * characters.length));
-            }
-            return result;
-        }
-
-        // קבלת כתובת IP (דרך שירות חיצוני)
-        async function getIpAddress() {
-            try {
-                const response = await fetch('https://api.ipify.org?format=json');
-                const data = await response.json();
-                return data.ip;
-            } catch (error) {
-                console.warn('לא ניתן לקבל כתובת IP:', error);
-                return 'Unknown';
+        // פונקציה לאתחול Supabase
+        function initSupabase() {
+            if (typeof window.supabase !== 'undefined') {
+                supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+                console.log('Supabase client initialized successfully.');
+                setupClientLogic(); // קרא לפונקציה הראשית שלך אחרי ש-Supabase מאותחל
+            } else {
+                console.error('Supabase library not loaded yet. Retrying...');
+                setTimeout(initSupabase, 100); // נסה שוב בעוד 100 מילישניות
             }
         }
 
-        // --- הגנות בצד הלקוח (Client-side protections) ---
-        function disablePageInteractions() {
-            document.querySelectorAll('.protected-content img').forEach(function(img) {
-                img.addEventListener('dragstart', function(e) { e.preventDefault(); });
-                img.addEventListener('mousedown', function(e) {
-                    if (e.button === 0) { e.preventDefault(); }
+        // פונקציה המכילה את כל הלוגיקה של הלקוח
+        function setupClientLogic() {
+            // --- אלמנטים ב-DOM ---
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const messageElement = document.getElementById('message');
+            const accessContainer = document.getElementById('access-container');
+            const accessCodeInput = document.getElementById('access-code-input');
+            const submitCodeButton = document.getElementById('submit-code-button');
+            const contentArea = document.getElementById('content-area');
+
+            // --- פונקציות עזר ---
+            function displayMessage(msg, isError = false) {
+                messageElement.textContent = msg;
+                messageElement.className = isError ? 'message error' : 'message success';
+                messageElement.style.display = 'block';
+            }
+
+            function showLoading(show) {
+                loadingSpinner.style.display = show ? 'block' : 'none';
+            }
+
+            function generateRandomCode(length) {
+                const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let result = '';
+                for (let i = 0; i < length; i++) {
+                    result += characters.charAt(Math.floor(Math.random() * characters.length));
+                }
+                return result;
+            }
+
+            async function getIpAddress() {
+                try {
+                    const response = await fetch('https://api.ipify.org?format=json');
+                    const data = await response.json();
+                    return data.ip;
+                } catch (error) {
+                    console.warn('לא ניתן לקבל כתובת IP:', error);
+                    return 'Unknown';
+                }
+            }
+
+            // --- הגנות בצד הלקוח (Client-side protections) ---
+            function disablePageInteractions() {
+                document.querySelectorAll('.protected-content img').forEach(function(img) {
+                    img.addEventListener('dragstart', function(e) { e.preventDefault(); });
+                    img.addEventListener('mousedown', function(e) {
+                        if (e.button === 0) { e.preventDefault(); }
+                    });
                 });
-            });
-            document.body.style.userSelect = 'none';
-            document.body.style.webkitUserSelect = 'none';
-            document.body.style.mozUserSelect = 'none';
-            document.body.style.msUserSelect = 'none';
+                document.body.style.userSelect = 'none';
+                document.body.style.webkitUserSelect = 'none';
+                document.body.style.mozUserSelect = 'none';
+                document.body.style.msUserSelect = 'none';
 
-            window.onbeforeprint = function() {
-                alert('הדפסה נחסמה!');
-                return false;
-            };
+                window.onbeforeprint = function() {
+                    alert('הדפסה נחסמה!');
+                    return false;
+                };
 
-            window.addEventListener('keyup', function(e) {
-                if (e.key === 'PrintScreen' || e.key === 'Snapshot') {
-                    console.warn('זוהה ניסיון לצילום מסך!');
-                    alert('צילום מסך נחסם!');
-                }
-            });
+                window.addEventListener('keyup', function(e) {
+                    if (e.key === 'PrintScreen' || e.key === 'Snapshot') {
+                        console.warn('זוהה ניסיון לצילום מסך!');
+                        alert('צילום מסך נחסם!');
+                    }
+                });
 
-            document.addEventListener('keydown', function(e) {
-                const forbiddenKeys = ['c', 'x', 'v', 'a', 'p', 's', 'i', 'j']; // העתקה, גזירה, הדבקה, בחר הכל, הדפסה, שמירה, בדיקה
-                if ((e.ctrlKey || e.metaKey) && forbiddenKeys.includes(e.key.toLowerCase())) {
-                    e.preventDefault();
-                }
-                if (e.key === 'F12') { // חסימת F12 (כלי מפתחים)
-                    e.preventDefault();
-                }
-            });
-            document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-            document.addEventListener('selectstart', function(e) { e.preventDefault(); });
-        }
+                document.addEventListener('keydown', function(e) {
+                    const forbiddenKeys = ['c', 'x', 'v', 'a', 'p', 's', 'i', 'j']; // העתקה, גזירה, הדבקה, בחר הכל, הדפסה, שמירה, בדיקה
+                    if ((e.ctrlKey || e.metaKey) && forbiddenKeys.includes(e.key.toLowerCase())) {
+                        e.preventDefault();
+                    }
+                    if (e.key === 'F12') { // חסימת F12 (כלי מפתחים)
+                        e.preventDefault();
+                    }
+                });
+                document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+                document.addEventListener('selectstart', function(e) { e.preventDefault(); });
+            }
 
 
-        // --- לוגיקת גישה ---
-        document.addEventListener('DOMContentLoaded', () => {
+            // --- לוגיקת גישה ---
             const LAST_USED_CODE_LS_KEY = 'last_used_access_code_for_client'; // מפתח ל-Local Storage של הלקוח
 
             // בדיקה ראשונית: האם המשתמש כבר נכנס עם קוד מהדפדפן הזה?
@@ -249,7 +260,7 @@
 
                 try {
                     // 1. קבל את הקוד הנוכחי מ-Supabase (דרך API פתוח)
-                    const { data: currentCodeData, error: currentCodeError } = await supabase
+                    const { data: currentCodeData, error: currentCodeError } = await supabaseClient
                         .from('current_code')
                         .select('code')
                         .eq('id', 1) // תמיד מניחים שיש רק רשומה אחת עם ID=1
@@ -272,7 +283,7 @@
 
                     // 4. צור קוד חדש ועדכן אותו ב-Supabase (דרך API פתוח)
                     const newCode = generateRandomCode(8);
-                    const { error: updateCodeError } = await supabase
+                    const { error: updateCodeError } = await supabaseClient
                         .from('current_code')
                         .update({ code: newCode })
                         .eq('id', 1);
@@ -287,7 +298,7 @@
                     // 5. שמור היסטוריה (דרך API פתוח)
                     const ipAddress = await getIpAddress();
                     const deviceType = navigator.userAgent;
-                    const { error: historyError } = await supabase
+                    const { error: historyError } = await supabaseClient
                         .from('history')
                         .insert([{ ip: ipAddress, device_type: deviceType, code_used: enteredCode }]);
                     if (historyError) {
@@ -307,7 +318,10 @@
                     showLoading(false);
                 }
             });
-        });
+        }
+
+        // הפעל את פונקציית האתחול כאשר ה-DOM נטען
+        document.addEventListener('DOMContentLoaded', initSupabase);
     </script>
 </body>
 </html>

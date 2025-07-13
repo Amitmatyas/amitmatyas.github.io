@@ -183,13 +183,13 @@
 
     <script>
         // --- הגדרות Supabase ---
-        const SUPABASE_URL = 'https://zeuztgzhagfpnthszxsl.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldXp0Z3poYWdmcG50aHN6eHNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0NDIwNTAsImV4cCI6MjA2ODAxODA1MH0.nRwI4EuakOHSCyfb9FW0a6wba02odXv8IkM_5m3-lRk'; // המפתח הציבורי שלך
+        const SUPABASE_URL = 'https://zeuztgzhagfpnthszxsl.supabase.co'; // שנה ל-URL שלך מ-Supabase
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldXp0Z3poYWdmcG50aHN6eHNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0NDIwNTAsImexZCI6MjA2ODAxODA1MH0.nRwI4EuakOHSCyfb9FW0a6wba02odXv8IkM_5m3-lRk'; // שנה למפתח ה-Anon Key שלך מ-Supabase
 
         const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // --- קבועים ואלמנטים ב-DOM ---
-        const ADMIN_PASSWORD = 'your_strong_admin_password'; // שנה סיסמה זו! לא מאובטח!
+        const ADMIN_PASSWORD = 'Amit12'; // הסיסמה שביקשת!
 
         const loadingSpinner = document.getElementById('loading-spinner');
         const messageElement = document.getElementById('message'); // הודעות גלובליות
@@ -342,7 +342,7 @@
 
                     displayMessage(`קוד חדש נוצר: ${newCode}`, false);
                     currentCodeDisplay.textContent = newCode; // עדכן תצוגה
-                    loadHistory(); // רענן היסטוריה (למקרה שנוספו כניסות בינתיים)
+                    loadAdminData(); // רענן נתונים (כולל היסטוריה אם התעדכנה)
                 } catch (error) {
                     console.error('שגיאה ביצירת קוד חדש:', error.message);
                     displayMessage('שגיאה ביצירת קוד חדש.', true);

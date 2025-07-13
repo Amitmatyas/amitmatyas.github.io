@@ -132,9 +132,16 @@
         }
 
         /* Specific admin buttons */
-        #admin-panel-content button {
-            width: auto;
-            margin-right: 10px;
+        #admin-panel-content .code-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px; /* רווח בין הכפתורים */
+            margin-bottom: 15px;
+        }
+        #admin-panel-content .code-actions button {
+            width: auto; /* כפתורים קטנים יותר */
+            flex-grow: 1; /* יתפשטו למילוי רווח זמין */
         }
         #logout-admin-button {
             background-color: #6c757d; /* Gray for logout */
@@ -146,7 +153,7 @@
         }
     </style>
 </head>
-<body>
+<body oncontextmenu="return false;">
     <div id="loading-spinner" class="spinner" style="display: none;"></div>
     <p id="message" class="message" style="display: none;"></p>
 
@@ -161,8 +168,11 @@
         <p>שלום, מנהל!</p>
 
         <h3>קוד גישה נוכחי:</h3>
-        <p id="current-code-display">טוען קוד...</p>
-        <button id="generate-new-code-button">צור קוד גישה חדש</button>
+        <p id="current-code-display" style="text-align: center; font-size: 1.2em; font-weight: bold; color: #007bff;"></p>
+        <div class="code-actions">
+            <button id="generate-new-code-button">צור קוד גישה חדש</button>
+            <button id="copy-code-button">העתק קוד</button>
+        </div>
 
         <h3>היסטוריית כניסות:</h3>
         <table id="history-table">
@@ -183,28 +193,25 @@
 
     <script>
         // --- הגדרות Supabase ---
-        const supabaseUrl = 'https://zeuztgzhagfpnthszxsl.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldXp0Z3poYWdmcG50aHN6eHNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0NDIwNTAsImV4cCI6MjA2ODAxODA1MH0.nRwI4EuakOHSCyfb9FW0a6wba02odWv8IkM_5m3-lRk';
+        const supabaseUrl = 'https://zeuztgzhagfpnthszxsl.supabase.co'; // הנתונים שלך
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldXp0Z3poYWdmcG50aHN6eHNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0NDIwNTAsImV4cCI6MjA2ODAxODA1MH0.nRwI4EuakOHSCyfb9FW0a6wba02odXv8IkM_5m3-lRk'; // הנתונים שלך
 
-        const ADMIN_PASSWORD = 'Amit12'; // הסיסמה שלך
+        const ADMIN_PASSWORD = 'Amit12';
 
-        let supabaseClient; // שיניתי את שם המשתנה כדי למנוע בלבול
+        let supabaseClient;
 
-        // פונקציה לאתחול Supabase
         function initSupabase() {
             if (typeof window.supabase !== 'undefined') {
                 supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
                 console.log('Supabase client initialized successfully.');
-                setupAdminLogic(); // קרא לפונקציה הראשית שלך אחרי ש-Supabase מאותחל
+                setupAdminLogic();
             } else {
                 console.error('Supabase library not loaded yet. Retrying...');
-                setTimeout(initSupabase, 100); // נסה שוב בעוד 100 מילישניות
+                setTimeout(initSupabase, 100);
             }
         }
 
-        // פונקציה המכילה את כל הלוגיקה של המנהל
         function setupAdminLogic() {
-            // --- קבועים ואלמנטים ב-DOM ---
             const loadingSpinner = document.getElementById('loading-spinner');
             const messageElement = document.getElementById('message');
 
@@ -214,10 +221,10 @@
             const adminPanelContent = document.getElementById('admin-panel-content');
             const currentCodeDisplay = document.getElementById('current-code-display');
             const generateNewCodeButton = document.getElementById('generate-new-code-button');
+            const copyCodeButton = document.getElementById('copy-code-button');
             const historyTableBody = document.querySelector('#history-table tbody');
             const logoutAdminButton = document.getElementById('logout-admin-button');
 
-            // --- פונקציות עזר ---
             function displayMessage(msg, isError = false) {
                 messageElement.textContent = msg;
                 messageElement.className = isError ? 'message error' : 'message success';
@@ -343,7 +350,7 @@
 
                     if (error) throw error;
 
-                    displayMessage(`קוד חדש נוצר: ${newCode}`, false);
+                    displayMessage(`קוד חדש נוצר בהצלחה: ${newCode}`, false);
                     currentCodeDisplay.textContent = newCode;
                     loadAdminData();
                 } catch (error) {
@@ -353,8 +360,18 @@
                     showLoading(false);
                 }
             });
+
+            copyCodeButton.addEventListener('click', async () => {
+                const codeToCopy = currentCodeDisplay.textContent;
+                try {
+                    await navigator.clipboard.writeText(codeToCopy);
+                    displayMessage('הקוד הועתק בהצלחה!', false);
+                } catch (err) {
+                    console.error('שגיאה בהעתקת קוד:', err);
+                    displayMessage('שגיאה בהעתקת קוד. נסה שוב ידנית.', true);
+                }
+            });
         }
-        // הפעל את פונקציית האתחול כאשר ה-DOM נטען
         document.addEventListener('DOMContentLoaded', initSupabase);
     </script>
 </body>

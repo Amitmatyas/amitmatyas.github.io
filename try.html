@@ -10,8 +10,8 @@
         /* CSS עבור עמוד הלקוח */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #e0f2f7; /* Light blue background */
-            color: #333;
+            background-color: #fce4e4; /* אדום בהיר מאוד, רקע מזהיר */
+            color: #4a1414; /* צבע טקסט כהה לאדום */
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
@@ -23,7 +23,7 @@
             text-align: right;
             line-height: 1.6;
             box-sizing: border-box;
-            overflow: hidden; /* למנוע גלילה כשהתוכן נסתר */
+            overflow: hidden; /* למנוע גלילה כשהתוכן נסתר או במסך מלא */
         }
 
         .container {
@@ -39,7 +39,7 @@
         }
 
         h1, h2 {
-            color: #007bff; /* Primary blue for headings */
+            color: #d32f2f; /* אדום כהה לכותרות */
             text-align: center;
             margin-bottom: 25px;
             font-weight: 600;
@@ -49,7 +49,7 @@
             width: calc(100% - 24px);
             padding: 12px;
             margin-bottom: 15px;
-            border: 1px solid #ced4da;
+            border: 1px solid #ef9a9a; /* גבול אדמדם */
             border-radius: 8px;
             font-size: 1em;
             box-sizing: border-box;
@@ -57,7 +57,7 @@
         }
 
         button {
-            background-color: #007bff;
+            background-color: #d32f2f; /* אדום כללי לכפתורים */
             color: white;
             padding: 12px 25px;
             border: none;
@@ -70,13 +70,28 @@
         }
 
         button:hover {
-            background-color: #0056b3;
+            background-color: #b71c1c; /* אדום כהה יותר בריחוף */
             transform: translateY(-2px);
         }
 
         button:active {
             transform: translateY(0);
         }
+
+        /* כפתורי אישור והצלחה - ירוק */
+        button#confirm-access-button {
+            background-color: #4CAF50; /* ירוק */
+        }
+        button#confirm-access-button:hover {
+            background-color: #45a049;
+        }
+        button#cancel-access-button { /* כפתור ביטול - אפור */
+            background-color: #6c757d;
+        }
+        button#cancel-access-button:hover {
+            background-color: #5a6268;
+        }
+
 
         .message {
             padding: 10px;
@@ -105,7 +120,7 @@
         /* Spinner */
         .spinner {
             border: 4px solid rgba(0, 0, 0, .1);
-            border-left-color: #007bff;
+            border-left-color: #d32f2f; /* צבע ספינר אדום */
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -118,34 +133,34 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Protected content styles */
+        /* Protected content styles - now truly fullscreen */
         .protected-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh; /* תוכן מוגן יתפוס את כל גובה המסך */
-            width: 100vw; /* תוכן מוגן יתפוס את כל רוחב המסך */
-            margin: 0;
-            padding: 0;
-            background-color: #e0f2f7; /* רקע דף */
-            position: fixed; /* כדי לכסות הכל */
+            position: fixed;
             top: 0;
             left: 0;
-            z-index: 1000; /* ודא שזה מעל הכל */
+            width: 100vw;
+            height: 100vh;
+            background-color: #fce4e4; /* רקע דף - אדום בהיר */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            margin: 0;
+            padding: 0;
+            border-radius: 0;
+            box-shadow: none;
+            overflow: hidden; /* למנוע גלילה בתוך התוכן עצמו */
             display: none; /* נסתר כברירת מחדל */
         }
 
         .protected-content iframe {
-            width: 90%; /* אייפרם יתפוס רוחב משמעותי */
-            height: 90%; /* אייפרם יתפוס גובה משמעותי */
-            max-width: 1200px; /* רוחב מקסימלי לאייפרם */
-            max-height: 800px; /* גובה מקסימלי לאייפרם */
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            display: block;
+            width: 100%; /* אייפרם יתפוס את כל הרוחב הזמין */
+            height: 100%; /* אייפרם יתפוס את כל הגובה הזמין */
+            border: none; /* הסר מסגרת ברירת מחדל */
+            margin: 0;
+            padding: 0;
             background-color: white; /* רקע לבן לאייפרם עצמו */
+            display: block;
         }
 
         /* overlay for anti-screenshot / forbidden action */
@@ -155,7 +170,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.95); /* כהה ובולט מאוד */
+            background-color: rgba(220, 53, 69, 0.95); /* אדום חזק עם שקיפות */
             color: white;
             display: flex;
             flex-direction: column;
@@ -191,13 +206,14 @@
         }
 
         #confirmation-container h2 {
-            color: #007bff;
+            color: #d32f2f; /* אדום כהה לכותרת */
             margin-bottom: 20px;
         }
 
         #confirmation-container p {
             margin-bottom: 15px;
             font-size: 1.1em;
+            color: #4a1414; /* טקסט אדום כהה */
         }
 
         #confirmation-container ul {
@@ -207,38 +223,20 @@
         }
 
         #confirmation-container ul li {
-            background-color: #f8f9fa;
-            border-left: 4px solid #007bff;
+            background-color: #fef1f1; /* רקע אדום בהיר לפסים */
+            border-right: 4px solid #d32f2f; /* פס אדום מזהיר בצד ימין */
+            border-left: none; /* לוודא שאין פס שמאל */
             padding: 10px 15px;
             margin-bottom: 10px;
             border-radius: 6px;
             font-size: 0.95em;
+            color: #4a1414; /* טקסט אדום כהה */
         }
 
-        #confirmation-container button {
-            margin-top: 15px;
-        }
-
-        /* Fullscreen styles */
+        /* Ensure body is completely full screen when content is visible */
         body.fullscreen {
-            margin: 0;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-        }
-        body.fullscreen #content-area {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            margin: 0;
-            padding: 0;
-            border-radius: 0;
-            box-shadow: none;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            padding-top: 0; /* ביטול ריפוד עליון */
+            overflow: hidden; /* מניעת גלילה */
         }
     </style>
 </head>
@@ -264,14 +262,11 @@
         </ul>
         <p><strong>אני מאשר/ת שקראתי והבנתי את התנאים הנ"ל ואני מסכים/ה להם באופן מלא.</strong></p>
         <button id="confirm-access-button">אני מאשר/ת את התנאים ורוצה להיכנס</button>
-        <button id="cancel-access-button" style="background-color: #6c757d;">ביטול</button>
+        <button id="cancel-access-button">ביטול</button>
     </div>
 
     <div id="content-area" class="protected-content">
-        <h1>ברוכים הבאים לאתר שלי – צפייה חד-פעמית</h1>
-        <p>זוהי תצוגה בלעדית וחד-פעמית של התוכן. לא ניתן להעתיק, לשמור תוכן או לצלם מסך.</p>
-        <iframe src="inddex.html" title="תוכן מוגן" allowfullscreen></iframe>
-        <p>ברגע שתצא/תצאי מהדף או תנסה/י לרענן, לא תוכל/י לגשת אליו שוב עם אותו קוד.</p>
+        <iframe id="protected-iframe" src="inddex.html" title="תוכן מוגן" allowfullscreen></iframe>
     </div>
 
     <div id="anti-screenshot-overlay">
@@ -311,6 +306,7 @@
             const confirmAccessButton = document.getElementById('confirm-access-button');
             const cancelAccessButton = document.getElementById('cancel-access-button');
             const contentArea = document.getElementById('content-area');
+            const protectedIframe = document.getElementById('protected-iframe');
             const antiScreenshotOverlay = document.getElementById('anti-screenshot-overlay');
 
             function displayMessage(msg, isError = false) {
@@ -393,8 +389,7 @@
                 // חסימת צילומי מסך והקשות מקלדת לא מורשות
                 document.addEventListener('keydown', function(e) {
                     const allowedKeys = [
-                        'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', // ניווט בתוך ה-iframe אם נדרש
-                        'Tab', 'Enter' // לצרכי ניווט בסיסיים אם יש אלמנטים ניתנים ללחיצה
+                        'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight' // ניווט בתוך ה-iframe אם נדרש
                     ];
 
                     // אם מקש הלחיצה אינו ברשימת המקשים המותרים
@@ -431,6 +426,33 @@
                     }
                 });
 
+                // --- שינוי כאן: זיהוי יציאת עכבר מה-iframe ---
+                if (protectedIframe) {
+                    let iframeRect;
+                    // עדכן את מיקום ה-iframe בכל שינוי גודל חלון
+                    window.addEventListener('resize', () => {
+                        iframeRect = protectedIframe.getBoundingClientRect();
+                    });
+                    // טען פעם ראשונה
+                    iframeRect = protectedIframe.getBoundingClientRect();
+
+                    document.addEventListener('mousemove', (e) => {
+                        if (contentIsVisible && protectionActive) {
+                            // ודא שה-iframeRect מעודכן
+                            iframeRect = protectedIframe.getBoundingClientRect();
+
+                            // אם העכבר מחוץ לגבולות ה-iframe
+                            if (e.clientX < iframeRect.left ||
+                                e.clientX > iframeRect.right ||
+                                e.clientY < iframeRect.top ||
+                                e.clientY > iframeRect.bottom) {
+                                console.warn('העכבר יצא מגבולות התוכן המוגן!');
+                                hideContentAndShowOverlay();
+                            }
+                        }
+                    });
+                }
+
 
                 // זיהוי עזיבת פוקוס מהחלון/לשונית (למשל, מעבר ליישום צילום מסך)
                 window.addEventListener('blur', hideContentAndShowOverlay);
@@ -440,7 +462,6 @@
                 const threshold = 160; // סף לשינוי בגובה/רוחב, טיפוסי לכלי מפתחים
                 window.addEventListener('resize', () => {
                     if (contentIsVisible && protectionActive) {
-                        // אם חלון הדפדפן קטן משמעותית מהחלון החיצוני (כלי מפתחים פתוחים)
                         const devToolsOpened = (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold);
                         if (devToolsOpened) {
                             hideContentAndShowOverlay();
@@ -567,9 +588,9 @@
                     confirmationContainer.style.display = 'none';
                     contentArea.style.display = 'flex'; // הצג את התוכן
                     contentIsVisible = true; // סמן שהתוכן גלוי כעת
-                    displayMessage('הגישה אושרה בהצלחה! התוכן נטען.', false);
                     document.body.classList.add('fullscreen'); // כניסה למצב מסך מלא
                     enablePageProtections(); // הפעל את ההגנות המלאות
+                    displayMessage('הגישה אושרה בהצלחה! התוכן נטען.', false);
 
                 } catch (error) {
                     console.error('שגיאה באישור גישה:', error.message);
@@ -592,22 +613,15 @@
         document.addEventListener('DOMContentLoaded', initSupabase);
 
         // --- בקרת ניווט וסגירת חלון ---
-        // שים לב: window.onbeforeunload לא מאפשר לחסום סגירה או רענון לחלוטין.
-        // הוא מאפשר רק להציג הודעה למשתמש.
         window.addEventListener('beforeunload', function(e) {
             if (contentIsVisible) {
                 // המשתמש מנסה לעזוב את הדף, לטעון מחדש או לסגור
-                // רשום ב-localStorage כדי לחסום כניסה עתידית מאותו דפדפן.
-                // localStorage.setItem(LAST_USED_CODE_LS_KEY, 'true'); // כבר מטופל בלחיצה על כפתור האישור
                 console.log('המשתמש עוזב/מרענן את הדף. הגישה תיחסם.');
                 const confirmationMessage = 'האם אתה בטוח שברצונך לעזוב? אם תעזוב, לא תוכל להיכנס שוב עם אותו קוד.';
                 (e || window.event).returnValue = confirmationMessage; // Standard
                 return confirmationMessage; // IE, Firefox < 4
             }
         });
-
-        // חשוב לוודא שקוד ה-iframe ("inddex.html") אינו מכיל סקריפטים שיכולים לעקוף את ההגנות
-        // ושגם הוא מוגן באופן דומה אם התוכן בו רגיש.
     </script>
 </body>
 </html>

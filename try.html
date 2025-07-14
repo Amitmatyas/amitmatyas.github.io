@@ -257,7 +257,7 @@
             <li>✨ <strong>צפייה בודדת:</strong> לאחר היציאה מהדף או רענון, הקוד יהפוך ללא תקף ולא תוכל/י לגשת לתוכן שוב עם אותו קוד.</li>
             <li>🔒 <strong>איסור העתקה ושמירה:</strong> חל איסור מוחלט על העתקה, הדפסה, שמירה או הורדה של כל חלק מהתוכן.</li>
             <li>📸 <strong>איסור צילום מסך:</strong> כל ניסיון לצלם מסך או להשתמש בתוכנות צילום (כמו "Print Screen") יגרום לחסימה מיידית של התוכן.</li>
-            <li>🚫 <strong>הגבלת אינטראקציה:</strong> בתוך אזור התוכן המוגן, מותר רק להשתמש בעכבר (גלגלת, לחיצה שמאלית, מעבר עכבר). כל לחיצת מקש במקלדת, יציאה מחלון הדפדפן, מעבר לכרטיסייה אחרת, או ניסיון לפתוח כלי מפתחים – ייחשבו כהפרת פרטיות ויגרמו לחסימת התוכן.</li>
+            <li>🚫 <strong>הגבלת אינטראקציה:</strong> בתוך אזור התוכן המוגן, מותר רק להשתמש בעכבר (גלגלת, לחיצה שמאלית, מעבר עכבר) ו**הקלדה בטפסים**. כל לחיצת מקש במקלדת שאינה הקלדה בטופס, יציאה מחלון הדפדפן, מעבר לכרטיסייה אחרת, או ניסיון לפתוח כלי מפתחים – ייחשבו כהפרת פרטיות ויגרמו לחסימת התוכן.</li>
             <li>💡 <strong>הבטחת פרטיות:</strong> אנו נוקטים באמצעים אלו כדי להגן על קניין רוחני ופרטיות התוכן המוצג.</li>
         </ul>
         <p><strong>אני מאשר/ת שקראתי והבנתי את התנאים הנ"ל ואני מסכים/ה להם באופן מלא.</strong></p>
@@ -284,6 +284,7 @@
         let supabaseClient;
         let contentIsVisible = false; // עוקב האם התוכן מוצג ללקוח
         let protectionActive = false; // עוקב האם ההגנות פעילות
+        let iframeLoaded = false; // עוקב האם ה-iframe נטען
 
         function initSupabase() {
             if (typeof window.supabase !== 'undefined') {
@@ -308,6 +309,16 @@
             const contentArea = document.getElementById('content-area');
             const protectedIframe = document.getElementById('protected-iframe');
             const antiScreenshotOverlay = document.getElementById('anti-screenshot-overlay');
+
+            // וודא שה-iframe נטען לפני הפעלת הגנות בתוכו
+            protectedIframe.onload = function() {
+                iframeLoaded = true;
+                if (contentIsVisible && protectionActive) {
+                    // כאן ניתן להפעיל הגנות נוספות בתוך ה-iframe עצמו אם נדרש
+                    // לדוגמה: protectedIframe.contentDocument.body.oncontextmenu = () => false;
+                }
+            };
+
 
             function displayMessage(msg, isError = false) {
                 messageElement.textContent = msg;
@@ -362,10 +373,7 @@
             // --- הגנות מקיפות ---
             function enablePageProtections() {
                 protectionActive = true;
-                // document.body.style.userSelect = 'none'; // זה יכול להפריע ללחיצה שמאלית
-                // document.body.style.webkitUserSelect = 'none';
-                // document.body.style.mozUserSelect = 'none';
-                // document.body.style.msUserSelect = 'none';
+                // הוסר: document.body.style.userSelect = 'none'; כדי לאפשר בחירת טקסט בטפסים
 
                 // חסימת קליק ימני
                 document.addEventListener('contextmenu', function(e) {
@@ -373,11 +381,13 @@
                     if (contentIsVisible) hideContentAndShowOverlay();
                 });
 
-                // חסימת בחירת טקסט - נשאיר מופעלת כי לא אמור להפריע ללחיצה רגילה
-                document.addEventListener('selectstart', function(e) {
-                    e.preventDefault();
-                    if (contentIsVisible) hideContentAndShowOverlay();
-                });
+                // חסימת בחירת טקסט - הוסר מכאן כדי לאפשר בחירה בטפסים.
+                // אם רוצים לחסום בחירת טקסט במקומות אחרים בדף (לא בטפסים), יש לעשות זאת ב-CSS.
+                // document.addEventListener('selectstart', function(e) {
+                //     e.preventDefault();
+                //     if (contentIsVisible) hideContentAndShowOverlay();
+                // });
+
 
                 // חסימת הדפסה
                 window.onbeforeprint = function() {
@@ -388,25 +398,27 @@
 
                 // חסימת צילומי מסך והקשות מקלדת לא מורשות
                 document.addEventListener('keydown', function(e) {
-                    const allowedKeys = [
-                        'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight' // ניווט בתוך ה-iframe אם נדרש
-                    ];
-
-                    // אם מקש הלחיצה אינו ברשימת המקשים המותרים
-                    if (!allowedKeys.includes(e.key)) {
-                        e.preventDefault(); // מנע את פעולת המקש
-                        if (contentIsVisible) {
-                            hideContentAndShowOverlay();
-                            console.warn(`זוהתה הקשת מקש אסורה: ${e.key}`);
+                    // אפשר הקלדה בתוך שדות טקסט/קלט
+                    const isInputTarget = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+                    if (isInputTarget) {
+                        // אפשר הקלדה רגילה ואת מקשי הניווט (חצים, Backspace, Delete, Home, End)
+                        const allowedInputKeys = [
+                            'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+                            'Backspace', 'Delete', 'Home', 'End', 'Tab', 'Enter'
+                        ];
+                        if (!e.ctrlKey && !e.metaKey && !e.altKey && !allowedInputKeys.includes(e.key)) {
+                            return; // אפשר הקלדת אותיות/ספרות רגילה
                         }
                     }
+
                     // חסימת שילובים נפוצים (Ctrl/Cmd + C/X/V/A/P/S/U/I/J/Shift+I/K, F12, PrintScreen)
+                    // אלה חסומים גם בשדות קלט, למניעת העתקה/הדבקה/גזירה
                     if (e.ctrlKey || e.metaKey || e.altKey) { // כולל Alt למקרה של Alt+PrintScreen
                         const forbiddenCombinations = [
                             'c', 'x', 'v', 'a', 'p', 's', 'u', 'i', 'j', 'k', // Ctrl/Cmd
                             'PrintScreen', 'Snapshot', 'F12' // מקשים ספציפיים
                         ];
-                        if (forbiddenCombinations.includes(e.key.toLowerCase())) {
+                        if (forbiddenCombinations.includes(e.key.toLowerCase()) || e.key === 'F12') {
                             e.preventDefault();
                             if (contentIsVisible) {
                                 hideContentAndShowOverlay();
@@ -414,6 +426,26 @@
                             }
                         }
                     }
+                     // חסימת F12 ישירות
+                    if (e.key === 'F12') {
+                        e.preventDefault();
+                        if (contentIsVisible) {
+                            hideContentAndShowOverlay();
+                            console.warn('זוהה ניסיון פתיחת כלי מפתחים (F12)!');
+                        }
+                    }
+                    // חסימת מקשים אחרים שאינם הקלדה בטופס
+                    else if (!isInputTarget && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                         const allowedNonInputKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']; // רק חצים מחוץ לטופס
+                         if (!allowedNonInputKeys.includes(e.key)) {
+                            e.preventDefault();
+                            if (contentIsVisible) {
+                                hideContentAndShowOverlay();
+                                console.warn(`זוהתה הקשת מקש אסורה מחוץ לטופס: ${e.key}`);
+                            }
+                         }
+                    }
+
                 });
 
                 // חסימת הקשות מקלדת לזיהוי צילום מסך (עבור חלק מהדפדפנים)
@@ -426,46 +458,50 @@
                     }
                 });
 
-                // --- שינוי כאן: זיהוי יציאת עכבר מה-iframe ---
-                if (protectedIframe) {
-                    let iframeRect;
-                    // עדכן את מיקום ה-iframe בכל שינוי גודל חלון
-                    window.addEventListener('resize', () => {
+                // --- שינוי כאן: זיהוי יציאת עכבר מה-iframe וניהול פוקוס ---
+                let iframeRect;
+                let mouseInsideIframe = false;
+
+                // פונקציה לעדכון גבולות ה-iframe
+                function updateIframeRect() {
+                    if (protectedIframe) {
                         iframeRect = protectedIframe.getBoundingClientRect();
-                    });
-                    // טען פעם ראשונה
-                    iframeRect = protectedIframe.getBoundingClientRect();
-
-                    document.addEventListener('mousemove', (e) => {
-                        if (contentIsVisible && protectionActive) {
-                            // ודא שה-iframeRect מעודכן
-                            iframeRect = protectedIframe.getBoundingClientRect();
-
-                            // אם העכבר מחוץ לגבולות ה-iframe (במילימטר)
-                            if (e.clientX < iframeRect.left ||
-                                e.clientX > iframeRect.right ||
-                                e.clientY < iframeRect.top ||
-                                e.clientY > iframeRect.bottom) {
-                                console.warn('העכבר יצא מגבולות התוכן המוגן!');
-                                hideContentAndShowOverlay();
-                            }
-                        }
-                    });
+                    }
                 }
 
+                // עדכן את מיקום ה-iframe בכל שינוי גודל חלון
+                window.addEventListener('resize', updateIframeRect);
+                // טען פעם ראשונה לאחר שה-iframe נטען
+                protectedIframe.addEventListener('load', updateIframeRect);
+                // עדכן גם אחרי שה-container מוצג (כי יכול להיות שלא היה iframeRect בהתחלה)
+                confirmAccessButton.addEventListener('click', updateIframeRect);
 
-                // זיהוי עזיבת פוקוס מהחלון/לשונית (למשל, מעבר ליישום צילום מסך)
-                // שיניתי את זה שזה לא יחסום ב-blur, אלא רק ב-focus בחזרה אם התוכן לא היה גלוי
-                window.addEventListener('blur', () => {
-                    if (contentIsVisible) { // אם התוכן גלוי והפוקוס אבד, הסתר
-                        hideContentAndShowOverlay();
+                document.addEventListener('mousemove', (e) => {
+                    if (contentIsVisible && protectionActive && iframeRect) {
+                        const isCurrentlyInside = (
+                            e.clientX >= iframeRect.left &&
+                            e.clientX <= iframeRect.right &&
+                            e.clientY >= iframeRect.top &&
+                            e.clientY <= iframeRect.bottom
+                        );
+
+                        if (isCurrentlyInside && !mouseInsideIframe) {
+                            // העכבר נכנס ל-iframe
+                            mouseInsideIframe = true;
+                            showContentAndHideOverlay(); // וודא שהתוכן גלוי
+                            console.log('העכבר נכנס לגבולות התוכן המוגן.');
+                        } else if (!isCurrentlyInside && mouseInsideIframe) {
+                            // העכבר יצא מה-iframe (גם במילימטר)
+                            mouseInsideIframe = false;
+                            hideContentAndShowOverlay();
+                            console.warn('העכבר יצא מגבולות התוכן המוגן!');
+                        }
                     }
                 });
-                window.addEventListener('focus', () => {
-                    if (contentIsVisible) { // אם התוכן גלוי והפוקוס חזר, וודא שגלוי
-                        showContentAndHideOverlay();
-                    }
-                });
+
+                // זיהוי עזיבת פוקוס מהחלון/לשונית
+                window.addEventListener('blur', hideContentAndShowOverlay);
+                window.addEventListener('focus', showContentAndHideOverlay); // יציג אם היה גלוי לפני ה-blur
 
                 // זיהוי שינויים בגודל החלון (לפעמים קורה בפתיחת כלי מפתחים)
                 const threshold = 160; // סף לשינוי בגובה/רוחב, טיפוסי לכלי מפתחים
@@ -484,13 +520,16 @@
                 // זיהוי פתיחת כלי מפתחים נוסף (שיטה אגרסיבית יותר)
                 let devtoolsOpen = false;
                 const checkDevTools = () => {
-                    const newDevtoolsOpen = /firefox|chrome|edge/i.test(navigator.userAgent) && (window.outerWidth - window.innerWidth > 100 || window.outerHeight - window.innerHeight > 100);
+                    if (!contentIsVisible) return; // אין צורך לבדוק אם התוכן לא גלוי
+
+                    const newDevtoolsOpen = (window.outerWidth - window.innerWidth > 100 || window.outerHeight - window.innerHeight > 100);
                     if (newDevtoolsOpen && !devtoolsOpen) {
                         devtoolsOpen = true;
-                        if (contentIsVisible) hideContentAndShowOverlay();
+                        hideContentAndShowOverlay();
+                        console.warn('זוהה ניסיון פתיחת כלי מפתחים (בדיקה אגרסיבית)!');
                     } else if (!newDevtoolsOpen && devtoolsOpen) {
                         devtoolsOpen = false;
-                        if (contentIsVisible) showContentAndHideOverlay();
+                        showContentAndHideOverlay();
                     }
                 };
                 setInterval(checkDevTools, 500); // בדיקה כל חצי שניה
@@ -504,24 +543,31 @@
                     }
                 });
 
-                // **חדש: חסימת מעבר לקישורים אחרים / ספירה של קליקים שמאליים מותרים**
+                // **חסימת מעבר לקישורים אחרים מחוץ לאייפרם וניווט**
                 document.addEventListener('click', function(e) {
-                    // ודא שהקליק הוא מחוץ ל-iframe
-                    if (contentIsVisible && e.target !== protectedIframe && !protectedIframe.contains(e.target)) {
-                        // אם לוחצים על אלמנט שהוא קישור (a tag) או אלמנט שמוביל לניווט
-                        if (e.target.tagName === 'A' || e.target.closest('a')) {
+                    if (!contentIsVisible || !protectionActive) return; // רק אם התוכן גלוי וההגנות פעילות
+
+                    // אם הלחיצה הייתה מחוץ לגבולות ה-iframe
+                    if (iframeRect && (e.clientX < iframeRect.left || e.clientX > iframeRect.right || e.clientY < iframeRect.top || e.clientY > iframeRect.bottom)) {
+                        e.preventDefault(); // מנע את פעולת הלחיצה
+                        hideContentAndShowOverlay();
+                        console.warn('זוהתה לחיצה מחוץ לתוכן המוגן!');
+                        return; // סיים פה, כבר טיפלנו בלחיצה
+                    }
+
+                    // אם הלחיצה הייתה על קישור (A tag) מכל סוג שהוא, גם בתוך ה-iframe
+                    // (אם הוא טוען דף חיצוני, זה יטופל על ידי זיהוי עזיבת פוקוס/שינוי גודל)
+                    const targetElement = e.target.closest('a');
+                    if (targetElement) {
+                        // אם הקישור הוא מחוץ לדף הנוכחי (או מוגדר להיפתח בחלון חדש)
+                        if (targetElement.href && (targetElement.target === '_blank' || !targetElement.href.startsWith(window.location.origin) || targetElement.href.includes('://') && !targetElement.href.startsWith(window.location.protocol + '//' + window.location.host))) {
                             e.preventDefault(); // מנע את הניווט
-                            hideContentAndShowOverlay(); // הסתר את התוכן
-                            console.warn('זוהה ניסיון מעבר לקישור מחוץ לתוכן המוגן!');
-                        } else if (e.button === 0) { // אם זו לחיצה שמאלית רגילה
-                             // אם לחיצה שמאלית מתרחשת מחוץ ל-iframe, היא עדיין תוביל לחסימה
-                             // אם אתה רוצה לאפשר לחיצות שמאליות **רק בתוך ה-iframe**, נצטרך לזהות זאת
-                             // כרגע, כל לחיצה מחוץ ל-iframe, גם אם היא לחיצה שמאלית רגילה, תחסום (כדי למנוע לחיצה על אלמנטים בדפדפן)
-                             hideContentAndShowOverlay();
-                             console.warn('זוהתה לחיצה שמאלית מחוץ לתוכן המוגן!');
+                            hideContentAndShowOverlay();
+                            console.warn('זוהה ניסיון מעבר לקישור חיצוני או חדש!');
                         }
                     }
-                });
+                }, true); // שימוש ב-capture phase כדי ללכוד אירועים מוקדם
+
 
                 // אפשרות אגרסיבית יותר לחסימת ניווט:
                 // מנסה למנוע ניווט באמצעות history API

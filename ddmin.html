@@ -297,10 +297,10 @@
                         historyData.forEach(entry => {
                             const row = historyTableBody.insertRow();
                             row.insertCell().textContent = new Date(entry.created_at).toLocaleString('he-IL');
-                            row.insertCell().textContent = entry.code_used || 'N/A';
-                            row.insertCell().textContent = entry.ip || 'N/A';
-                            row.insertCell().textContent = entry.device_type || 'N/A';
-                            row.insertCell().textContent = entry.name || 'N/A';
+                            row.insertCell().textContent = entry.code_used || 'לא ידוע';
+                            row.insertCell().textContent = entry.ip || 'לא ידוע';
+                            row.insertCell().textContent = entry.device_type || 'לא ידוע';
+                            row.insertCell().textContent = entry.name || 'לא ידוע';
                         });
                     }
                 } catch (error) {

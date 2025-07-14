@@ -238,6 +238,21 @@
             padding-top: 0; /* ביטול ריפוד עליון */
             overflow: hidden; /* מניעת גלילה */
         }
+
+        /* New style for mobile blocked message */
+        #mobile-blocked-message {
+            background-color: #ffe0e6;
+            color: #dc3545;
+            border: 1px solid #dc3545;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 50px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            display: none; /* נסתר כברירת מחדל */
+        }
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -276,6 +291,12 @@
         <span>כל ניסיון להפר את תנאי הצפייה יגרום לחסימה מיידית.</span>
     </div>
 
+    <div id="mobile-blocked-message" class="container">
+        <p>מטעמי פרטיות ואבטחת תוכן, לא ניתן להיכנס לאתר זה דרך הטלפון.</p>
+        <p>אנא נסה/י דרך המחשב. תודה על ההבנה!</p>
+        <p class="emoji">💻🚫📱</p>
+    </div>
+
     <script>
         // --- הגדרות Supabase ---
         const supabaseUrl = 'https://zeuztgzhagfpnthszxsl.supabase.co'; // הנתונים שלך
@@ -285,7 +306,14 @@
         let contentIsVisible = false; // עוקב האם התוכן מוצג ללקוח
         let protectionActive = false; // עוקב האם ההגנות פעילות
         let iframeLoaded = false; // עוקב האם ה-iframe נטען
-        let visibilityChangeTimer; // טיימר לטיפול באירועי שינוי נראות הדף
+
+        const MOBILE_BLOCKED_LS_KEY = 'mobile_access_blocked'; // מפתח ל-localStorage עבור חסימת ניידים
+
+        // פונקציה לזיהוי מכשיר נייד
+        function isMobileDevice() {
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            return /android|ipad|iphone|ipod|blackberry|windows phone/i.test(userAgent);
+        }
 
         function initSupabase() {
             if (typeof window.supabase !== 'undefined') {
@@ -310,6 +338,7 @@
             const contentArea = document.getElementById('content-area');
             const protectedIframe = document.getElementById('protected-iframe');
             const antiScreenshotOverlay = document.getElementById('anti-screenshot-overlay');
+            const mobileBlockedMessage = document.getElementById('mobile-blocked-message'); // אלמנט הודעת חסימת ניידים
 
             // וודא שה-iframe נטען לפני הפעלת הגנות בתוכו
             protectedIframe.onload = function() {
@@ -319,7 +348,6 @@
                     // לדוגמה: protectedIframe.contentDocument.body.oncontextmenu = () => false;
                 }
             };
-
 
             function displayMessage(msg, isError = false) {
                 messageElement.textContent = msg;
@@ -374,7 +402,6 @@
             // --- הגנות מקיפות ---
             function enablePageProtections() {
                 protectionActive = true;
-                // הוסר: document.body.style.userSelect = 'none'; כדי לאפשר בחירת טקסט בטפסים
 
                 // חסימת קליק ימני
                 document.addEventListener('contextmenu', function(e) {
@@ -419,7 +446,7 @@
                             }
                         }
                     }
-                    // חסימת F12 ישירות
+                     // חסימת F12 ישירות
                     if (e.key === 'F12') {
                         e.preventDefault();
                         if (contentIsVisible) {
@@ -429,14 +456,14 @@
                     }
                     // חסימת מקשים אחרים שאינם הקלדה בטופס
                     else if (!isInputTarget && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                           const allowedNonInputKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']; // רק חצים מחוץ לטופס
-                           if (!allowedNonInputKeys.includes(e.key)) {
-                               e.preventDefault();
-                               if (contentIsVisible) {
-                                   hideContentAndShowOverlay();
-                                   console.warn(`זוהתה הקשת מקש אסורה מחוץ לטופס: ${e.key}`);
-                               }
-                           }
+                            const allowedNonInputKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']; // רק חצים מחוץ לטופס
+                            if (!allowedNonInputKeys.includes(e.key)) {
+                                e.preventDefault();
+                                if (contentIsVisible) {
+                                    hideContentAndShowOverlay();
+                                    console.warn(`זוהתה הקשת מקש אסורה מחוץ לטופס: ${e.key}`);
+                                }
+                            }
                     }
 
                 });
@@ -492,23 +519,9 @@
                     }
                 });
 
-                // --- שיפורים לזיהוי צילום מסך ושינוי טאב בטלפון ובמחשב ---
-                document.addEventListener('visibilitychange', () => {
-                    if (document.hidden) {
-                        // המשתמש עזב את הכרטיסייה / עבר לאפליקציה אחרת
-                        // אנו משהים מעט את ההסתרה כדי למנוע טריגר שווא ממעבר קצר
-                        if (contentIsVisible && protectionActive) {
-                            visibilityChangeTimer = setTimeout(() => {
-                                hideContentAndShowOverlay();
-                                console.warn('זוהה שינוי נראות (טאב/אפליקציה אחרת)!');
-                            }, 300); // השהיה של 300 מילישניות
-                        }
-                    } else {
-                        // המשתמש חזר לכרטיסייה
-                        clearTimeout(visibilityChangeTimer); // בטל את הטיימר אם חזר מהר
-                        showContentAndHideOverlay(); // הצג מחדש אם צריך
-                    }
-                });
+                // זיהוי עזיבת פוקוס מהחלון/לשונית
+                window.addEventListener('blur', hideContentAndShowOverlay);
+                window.addEventListener('focus', showContentAndHideOverlay); // יציג אם היה גלוי לפני ה-blur
 
                 // זיהוי שינויים בגודל החלון (לפעמים קורה בפתיחת כלי מפתחים)
                 const threshold = 160; // סף לשינוי בגובה/רוחב, טיפוסי לכלי מפתחים
@@ -586,12 +599,36 @@
                         window.history.pushState(null, null, window.location.href); // נסה לדחוף שוב כדי לנעול
                     }
                 });
+
             }
 
 
             const LAST_USED_CODE_LS_KEY = 'last_used_access_code_for_client';
 
-            // בדיקה ראשונית אם כבר נכנסו
+            // --- בדיקה ראשונית של מכשיר נייד ---
+            if (isMobileDevice()) {
+                // אם כבר סומן שהגישה נחסמה בנייד, אל תציג שוב את מסך ההקלדה
+                if (localStorage.getItem(MOBILE_BLOCKED_LS_KEY) === 'true') {
+                    accessContainer.style.display = 'none';
+                    confirmationContainer.style.display = 'none';
+                    contentArea.style.display = 'none';
+                    mobileBlockedMessage.style.display = 'block'; // הצג את הודעת החסימה
+                    messageElement.style.display = 'none'; // הסתר הודעות כלליות
+                    return; // סיים את הפעולה, אין טעם להמשיך
+                } else {
+                    // בפעם הראשונה שנייד ניגש, נסמן ב-localStorage
+                    localStorage.setItem(MOBILE_BLOCKED_LS_KEY, 'true');
+                    accessContainer.style.display = 'none';
+                    confirmationContainer.style.display = 'none';
+                    contentArea.style.display = 'none';
+                    mobileBlockedMessage.style.display = 'block'; // הצג את הודעת החסימה
+                    messageElement.style.display = 'none'; // הסתר הודעות כלליות
+                    return; // סיים את הפעולה
+                }
+            }
+
+
+            // בדיקה ראשונית אם כבר נכנסו (רק אם זה לא מכשיר נייד)
             if (localStorage.getItem(LAST_USED_CODE_LS_KEY) === 'true') {
                 accessContainer.style.display = 'none';
                 contentArea.style.display = 'none';

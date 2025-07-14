@@ -285,6 +285,7 @@
         let contentIsVisible = false; // עוקב האם התוכן מוצג ללקוח
         let protectionActive = false; // עוקב האם ההגנות פעילות
         let iframeLoaded = false; // עוקב האם ה-iframe נטען
+        let visibilityChangeTimer; // טיימר לטיפול באירועי שינוי נראות הדף
 
         function initSupabase() {
             if (typeof window.supabase !== 'undefined') {
@@ -381,14 +382,6 @@
                     if (contentIsVisible) hideContentAndShowOverlay();
                 });
 
-                // חסימת בחירת טקסט - הוסר מכאן כדי לאפשר בחירה בטפסים.
-                // אם רוצים לחסום בחירת טקסט במקומות אחרים בדף (לא בטפסים), יש לעשות זאת ב-CSS.
-                // document.addEventListener('selectstart', function(e) {
-                //     e.preventDefault();
-                //     if (contentIsVisible) hideContentAndShowOverlay();
-                // });
-
-
                 // חסימת הדפסה
                 window.onbeforeprint = function() {
                     alert('הדפסה נחסמה!');
@@ -426,7 +419,7 @@
                             }
                         }
                     }
-                     // חסימת F12 ישירות
+                    // חסימת F12 ישירות
                     if (e.key === 'F12') {
                         e.preventDefault();
                         if (contentIsVisible) {
@@ -436,14 +429,14 @@
                     }
                     // חסימת מקשים אחרים שאינם הקלדה בטופס
                     else if (!isInputTarget && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                         const allowedNonInputKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']; // רק חצים מחוץ לטופס
-                         if (!allowedNonInputKeys.includes(e.key)) {
-                            e.preventDefault();
-                            if (contentIsVisible) {
-                                hideContentAndShowOverlay();
-                                console.warn(`זוהתה הקשת מקש אסורה מחוץ לטופס: ${e.key}`);
-                            }
-                         }
+                           const allowedNonInputKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']; // רק חצים מחוץ לטופס
+                           if (!allowedNonInputKeys.includes(e.key)) {
+                               e.preventDefault();
+                               if (contentIsVisible) {
+                                   hideContentAndShowOverlay();
+                                   console.warn(`זוהתה הקשת מקש אסורה מחוץ לטופס: ${e.key}`);
+                               }
+                           }
                     }
 
                 });
@@ -499,9 +492,23 @@
                     }
                 });
 
-                // זיהוי עזיבת פוקוס מהחלון/לשונית
-                window.addEventListener('blur', hideContentAndShowOverlay);
-                window.addEventListener('focus', showContentAndHideOverlay); // יציג אם היה גלוי לפני ה-blur
+                // --- שיפורים לזיהוי צילום מסך ושינוי טאב בטלפון ובמחשב ---
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        // המשתמש עזב את הכרטיסייה / עבר לאפליקציה אחרת
+                        // אנו משהים מעט את ההסתרה כדי למנוע טריגר שווא ממעבר קצר
+                        if (contentIsVisible && protectionActive) {
+                            visibilityChangeTimer = setTimeout(() => {
+                                hideContentAndShowOverlay();
+                                console.warn('זוהה שינוי נראות (טאב/אפליקציה אחרת)!');
+                            }, 300); // השהיה של 300 מילישניות
+                        }
+                    } else {
+                        // המשתמש חזר לכרטיסייה
+                        clearTimeout(visibilityChangeTimer); // בטל את הטיימר אם חזר מהר
+                        showContentAndHideOverlay(); // הצג מחדש אם צריך
+                    }
+                });
 
                 // זיהוי שינויים בגודל החלון (לפעמים קורה בפתיחת כלי מפתחים)
                 const threshold = 160; // סף לשינוי בגובה/רוחב, טיפוסי לכלי מפתחים
@@ -579,7 +586,6 @@
                         window.history.pushState(null, null, window.location.href); // נסה לדחוף שוב כדי לנעול
                     }
                 });
-
             }
 
 

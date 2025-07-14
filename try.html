@@ -362,10 +362,10 @@
             // --- הגנות מקיפות ---
             function enablePageProtections() {
                 protectionActive = true;
-                document.body.style.userSelect = 'none';
-                document.body.style.webkitUserSelect = 'none';
-                document.body.style.mozUserSelect = 'none';
-                document.body.style.msUserSelect = 'none';
+                // document.body.style.userSelect = 'none'; // זה יכול להפריע ללחיצה שמאלית
+                // document.body.style.webkitUserSelect = 'none';
+                // document.body.style.mozUserSelect = 'none';
+                // document.body.style.msUserSelect = 'none';
 
                 // חסימת קליק ימני
                 document.addEventListener('contextmenu', function(e) {
@@ -373,7 +373,7 @@
                     if (contentIsVisible) hideContentAndShowOverlay();
                 });
 
-                // חסימת בחירת טקסט
+                // חסימת בחירת טקסט - נשאיר מופעלת כי לא אמור להפריע ללחיצה רגילה
                 document.addEventListener('selectstart', function(e) {
                     e.preventDefault();
                     if (contentIsVisible) hideContentAndShowOverlay();
@@ -441,7 +441,7 @@
                             // ודא שה-iframeRect מעודכן
                             iframeRect = protectedIframe.getBoundingClientRect();
 
-                            // אם העכבר מחוץ לגבולות ה-iframe
+                            // אם העכבר מחוץ לגבולות ה-iframe (במילימטר)
                             if (e.clientX < iframeRect.left ||
                                 e.clientX > iframeRect.right ||
                                 e.clientY < iframeRect.top ||
@@ -455,8 +455,17 @@
 
 
                 // זיהוי עזיבת פוקוס מהחלון/לשונית (למשל, מעבר ליישום צילום מסך)
-                window.addEventListener('blur', hideContentAndShowOverlay);
-                window.addEventListener('focus', showContentAndHideOverlay);
+                // שיניתי את זה שזה לא יחסום ב-blur, אלא רק ב-focus בחזרה אם התוכן לא היה גלוי
+                window.addEventListener('blur', () => {
+                    if (contentIsVisible) { // אם התוכן גלוי והפוקוס אבד, הסתר
+                        hideContentAndShowOverlay();
+                    }
+                });
+                window.addEventListener('focus', () => {
+                    if (contentIsVisible) { // אם התוכן גלוי והפוקוס חזר, וודא שגלוי
+                        showContentAndHideOverlay();
+                    }
+                });
 
                 // זיהוי שינויים בגודל החלון (לפעמים קורה בפתיחת כלי מפתחים)
                 const threshold = 160; // סף לשינוי בגובה/רוחב, טיפוסי לכלי מפתחים
@@ -494,6 +503,37 @@
                         console.warn('זוהתה לחיצה על כפתור עכבר אמצעי!');
                     }
                 });
+
+                // **חדש: חסימת מעבר לקישורים אחרים / ספירה של קליקים שמאליים מותרים**
+                document.addEventListener('click', function(e) {
+                    // ודא שהקליק הוא מחוץ ל-iframe
+                    if (contentIsVisible && e.target !== protectedIframe && !protectedIframe.contains(e.target)) {
+                        // אם לוחצים על אלמנט שהוא קישור (a tag) או אלמנט שמוביל לניווט
+                        if (e.target.tagName === 'A' || e.target.closest('a')) {
+                            e.preventDefault(); // מנע את הניווט
+                            hideContentAndShowOverlay(); // הסתר את התוכן
+                            console.warn('זוהה ניסיון מעבר לקישור מחוץ לתוכן המוגן!');
+                        } else if (e.button === 0) { // אם זו לחיצה שמאלית רגילה
+                             // אם לחיצה שמאלית מתרחשת מחוץ ל-iframe, היא עדיין תוביל לחסימה
+                             // אם אתה רוצה לאפשר לחיצות שמאליות **רק בתוך ה-iframe**, נצטרך לזהות זאת
+                             // כרגע, כל לחיצה מחוץ ל-iframe, גם אם היא לחיצה שמאלית רגילה, תחסום (כדי למנוע לחיצה על אלמנטים בדפדפן)
+                             hideContentAndShowOverlay();
+                             console.warn('זוהתה לחיצה שמאלית מחוץ לתוכן המוגן!');
+                        }
+                    }
+                });
+
+                // אפשרות אגרסיבית יותר לחסימת ניווט:
+                // מנסה למנוע ניווט באמצעות history API
+                window.history.pushState(null, null, window.location.href);
+                window.addEventListener('popstate', function () {
+                    if (contentIsVisible) {
+                        hideContentAndShowOverlay();
+                        console.warn('זוהה ניסיון ניווט באמצעות לחצן אחורה/קדימה בדפדפן!');
+                        window.history.pushState(null, null, window.location.href); // נסה לדחוף שוב כדי לנעול
+                    }
+                });
+
             }
 
 

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>ניהול שוברים מאובטח</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent: #22c55e; --bg: #020617; --card: #0f172a; --danger: #ef4444; }
+        body { font-family: 'Rubik', sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; direction: rtl; }
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid var(--accent); padding-bottom: 15px; }
+        
+        /* אזור האבטחה */
+        .auth-box { background: #1e293b; padding: 15px; border-radius: 12px; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border: 1px solid #334155; }
+        .auth-box input { background: #0f172a; border: 1px solid var(--accent); color: white; padding: 8px; border-radius: 6px; text-align: center; font-size: 16px; width: 100px; outline: none; }
+        .auth-status { font-size: 14px; font-weight: bold; }
+        .status-unlocked { color: var(--accent); }
+        .status-locked { color: var(--danger); }
+
+        table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        th, td { padding: 18px; border-bottom: 1px solid #1e293b; text-align: center; }
+        th { background: rgba(34, 197, 94, 0.1); color: var(--accent); }
+
+        .balance-control { display: flex; align-items: center; justify-content: center; gap: 20px; }
+        .num-display { font-size: 26px; font-weight: 700; min-width: 45px; }
+        
+        .btn { width: 42px; height: 42px; border-radius: 10px; border: none; cursor: pointer; font-size: 22px; font-weight: bold; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .btn-plus { background: var(--accent); color: #020617; }
+        .btn-minus { background: var(--danger); color: white; }
+        .btn:disabled { opacity: 0.15; cursor: not-allowed; filter: grayscale(1); }
+
+        .sync-indicator { font-size: 11px; margin-top: 4px; height: 15px; }
+        .success-flash { color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1 style="margin:0;">שליטה בשוברים</h1>
+            <p style="margin:5px 0 0 0; color:#9ca3af;">ניהול נתונים בענן (מאובטח)</p>
+        </div>
+        <div id="globalStatus" style="font-size: 13px; color: var(--accent);">מתחבר...</div>
+    </header>
+
+    <div class="auth-box">
+        <span>קוד גישה לעריכה:</span>
+        <input type="password" id="adminPass" placeholder="----" oninput="checkAuth()">
+        <span id="lockStatus" class="status-locked">🔒 נעול (צפייה בלבד)</span>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>שם לקוח</th>
+                <th>טלפון</th>
+                <th>יתרה בענן</th>
+            </tr>
+        </thead>
+        <tbody id="userTableBody">
+            <tr><td colspan="3">טוען נתונים...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js";
+
+    const URL = "https://gvixtwcolhkdcrhfbcsi.supabase.co";
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2aXh0d2NvbGhrZGNyaGZiY3NpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNzMyODAsImV4cCI6MjA3ODk0OTI4MH0.M_8fD36NWnTKgYxS4LkxH27SKyOMbzbZ-EILxm77prI";
+    const supabase = createClient(URL, KEY);
+
+    const MASTER_CODE = "24067";
+    let isUnlocked = false;
+    let users = [];
+
+    // בדיקת הקוד
+    window.checkAuth = () => {
+        const input = document.getElementById('adminPass').value;
+        const status = document.getElementById('lockStatus');
+        
+        if (input === MASTER_CODE) {
+            isUnlocked = true;
+            status.innerHTML = "🔓 פתוח לעריכה";
+            status.className = "status-unlocked";
+            render(); // רענון כדי להפעיל כפתורים
+        } else {
+            isUnlocked = false;
+            status.innerHTML = "🔒 נעול (צפייה בלבד)";
+            status.className = "status-locked";
+            render(); // רענון כדי לנעול כפתורים
+        }
+    };
+
+    async function loadData() {
+        const { data, error } = await supabase.from('profiles').select('*').order('display_name');
+        if (error) {
+            document.getElementById('globalStatus').innerText = "❌ שגיאה בחיבור";
+            return;
+        }
+        users = data;
+        document.getElementById('globalStatus').innerText = "● מחובר";
+        render();
+    }
+
+    function render() {
+        const tbody = document.getElementById('userTableBody');
+        tbody.innerHTML = users.map((user) => `
+            <tr>
+                <td><b>${user.display_name || 'אורח'}</b></td>
+                <td style="color:#9ca3af">${user.phone || '---'}</td>
+                <td>
+                    <div class="balance-control">
+                        <button class="btn btn-minus" ${!isUnlocked ? 'disabled' : ''} onclick="changeBalance('${user.id}', -1)">-</button>
+                        <span class="num-display" id="num-${user.id}">${user.current_balance}</span>
+                        <button class="btn btn-plus" ${!isUnlocked ? 'disabled' : ''} onclick="changeBalance('${user.id}', 1)">+</button>
+                    </div>
+                    <div class="sync-indicator" id="sync-${user.id}"></div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    window.changeBalance = async (id, delta) => {
+        if (!isUnlocked) return;
+
+        const user = users.find(u => u.id === id);
+        const newVal = user.current_balance + delta;
+        if (newVal < 0) return;
+
+        const numEl = document.getElementById(`num-${id}`);
+        const syncEl = document.getElementById(`sync-${id}`);
+        
+        // עדכון מקומי מהיר
+        user.current_balance = newVal;
+        numEl.innerText = newVal;
+        syncEl.innerText = "מעדכן ענן...";
+
+        // עדכון ב-Supabase
+        const { error } = await supabase
+            .from('profiles')
+            .update({ current_balance: newVal })
+            .eq('id', id);
+
+        if (error) {
+            alert("שגיאה בעדכון: " + error.message);
+            syncEl.innerText = "❌ נכשל";
+        } else {
+            numEl.classList.add('success-flash');
+            syncEl.innerText = "✓ נשמר";
+            setTimeout(() => {
+                numEl.classList.remove('success-flash');
+                syncEl.innerText = "";
+            }, 800);
+        }
+    };
+
+    loadData();
+</script>
+
+</body>
+</html>
